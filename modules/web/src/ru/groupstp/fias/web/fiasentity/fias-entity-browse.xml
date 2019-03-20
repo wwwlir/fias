@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<window xmlns="http://schemas.haulmont.com/cuba/window.xsd"
+        caption="msg://browseCaption"
+        class="ru.groupstp.fias.web.fiasentity.FiasEntityBrowse"
+        focusComponent="fiasEntitiesTable"
+        lookupComponent="fiasEntitiesTable"
+        messagesPack="ru.groupstp.fias.web.fiasentity">
+    <dsContext>
+        <hierarchicalDatasource id="fiasEntitiesDs"
+                                class="ru.groupstp.fias.entity.FiasEntity"
+                                hierarchyProperty="parent"
+                                view="parent">
+            <query>
+                <![CDATA[select e from fias$FiasEntity e]]>
+            </query>
+        </hierarchicalDatasource>
+    </dsContext>
+    <dialogMode height="600"
+                width="800"/>
+    <layout expand="fiasEntitiesTable"
+            spacing="true">
+        <filter id="filter"
+                applyTo="fiasEntitiesTable"
+                datasource="fiasEntitiesDs">
+            <properties include=".*"/>
+        </filter>
+        <treeTable id="fiasEntitiesTable"
+                   multiselect="true"
+                   presentations="true"
+                   width="100%">
+            <actions>
+                <action id="create"/>
+                <action id="edit"/>
+                <action id="remove"/>
+                <action id="excel"/>
+                <action id="refresh"/>
+            </actions>
+            <columns>
+                <column id="shortname"/>
+                <column id="name"/>
+                <column id="postalCode"/>
+                <column id="offname"/>
+                <column id="formalname"/>
+                <column id="possibleNames"/>
+                <column id="code"/>
+            </columns>
+            <rows datasource="fiasEntitiesDs"/>
+            <rowsCount/>
+            <buttonsPanel id="buttonsPanel"
+                          alwaysVisible="true">
+                <button id="createBtn"
+                        action="fiasEntitiesTable.create"/>
+                <button id="editBtn"
+                        action="fiasEntitiesTable.edit"/>
+                <button id="removeBtn"
+                        action="fiasEntitiesTable.remove"/>
+                <button id="excelBtn"
+                        action="fiasEntitiesTable.excel"/>
+                <button id="refreshBtn"
+                        action="fiasEntitiesTable.refresh"/>
+            </buttonsPanel>
+        </treeTable>
+    </layout>
+</window>

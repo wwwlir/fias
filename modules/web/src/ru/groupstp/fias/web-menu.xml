@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<menu-config xmlns="http://schemas.haulmont.com/cuba/menu.xsd">
+    <item insertBefore="administration"
+          screen="fiasClient"/>
+    <menu id="application-fias"
+          insertBefore="administration">
+        <item screen="fias$FiasEntity.browse"/>
+    </menu>
+</menu-config>
