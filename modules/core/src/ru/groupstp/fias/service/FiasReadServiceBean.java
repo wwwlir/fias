@@ -37,20 +37,20 @@ public class FiasReadServiceBean implements FiasReadService {
     @Inject
     private DataManager dataManager;
 
-    FiasClient fiasClient;
+    private FiasClient fiasClient;
 
     @Override
     public void readFias() throws FileNotFoundException {
         Path xmlDirectory = Paths.get("/mnt/sda2/lobo/fias/xml");
         fiasClient= new FiasClient(xmlDirectory);
 
-        loadObjects(AddressLevel.REGION, Region.class,o -> o.getREGIONCODE());
-        loadObjects(AddressLevel.AUTONOMY, Autonomy.class,  o -> o.getCODE());
-        loadObjects(AddressLevel.AREA, Area.class, o -> o.getAREACODE());
-        loadObjects(AddressLevel.CITY, City.class, o -> o.getCITYCODE());
-        loadObjects(AddressLevel.COMMUNITY, Community.class, o -> o.getCODE());
-        loadObjects(AddressLevel.LOCATION, Location.class, o -> o.getCODE());
-        loadObjects(AddressLevel.STREET, Street.class, o -> o.getSTREETCODE());
+        loadObjects(AddressLevel.REGION, Region.class, AddressObjects.Object::getREGIONCODE);
+        loadObjects(AddressLevel.AUTONOMY, Autonomy.class, AddressObjects.Object::getCODE);
+        loadObjects(AddressLevel.AREA, Area.class, AddressObjects.Object::getAREACODE);
+        loadObjects(AddressLevel.CITY, City.class, AddressObjects.Object::getCITYCODE);
+        loadObjects(AddressLevel.COMMUNITY, Community.class, AddressObjects.Object::getCODE);
+        loadObjects(AddressLevel.LOCATION, Location.class, AddressObjects.Object::getCODE);
+        loadObjects(AddressLevel.STREET, Street.class, AddressObjects.Object::getSTREETCODE);
 
         //TODO: loadHouses
         //loadHouses();
@@ -58,7 +58,7 @@ public class FiasReadServiceBean implements FiasReadService {
 
 
 
-    void loadObjects(AddressLevel level, Class clazz, Function<AddressObjects.Object, String> getCodeFunction)
+    private void loadObjects(AddressLevel level, Class clazz, Function<AddressObjects.Object, String> getCodeFunction)
     {
         log.debug("Loading objects of level {}", level.name());
         List<AddressObjects.Object> objects = fiasClient.load(o -> o.getAOLEVEL().equals(level.getAddressLevel()));
@@ -69,11 +69,17 @@ public class FiasReadServiceBean implements FiasReadService {
             if(entity==null)
                 return;
             entity.setCode(getCodeFunction.apply(object));
-            dataManager.commit(entity);
+            try {
+                dataManager.commit(entity);
+            }
+            catch (Exception e)
+            {
+                log.error("Error while commit {}: {}, {}", clazz.getSimpleName(), entity.getName(), e.getMessage());
+            }
         });
     }
 
-    FiasEntity loadFiasEntity(Class clazz, AddressObjects.Object object)
+    private FiasEntity loadFiasEntity(Class clazz, AddressObjects.Object object)
     {
         UUID id = UUID.fromString(object.getAOGUID());
         FiasEntity entity = null;
@@ -93,9 +99,7 @@ public class FiasReadServiceBean implements FiasReadService {
             entity.setPostalCode(object.getPOSTALCODE());
             try {
                 if(object.getPARENTGUID()!=null) {
-                    UUID parentId = UUID.fromString(object.getPARENTGUID());
-                    FiasEntity parent = dataManager.load(FiasEntity.class).id(parentId).one();
-                    entity.setParent(parent);
+                    entity.setParent(get(object.getPARENTGUID()));
                 }
             }
             catch (Exception y)
@@ -108,14 +112,24 @@ public class FiasReadServiceBean implements FiasReadService {
             names.add(object.getFORMALNAME());
             names.add(object.getOFFNAME());
             entity.setValue("possibleNames", String.join(",", names));
-            return entity;
         }
+        return entity;
     }
 
     private static HashMap <String, StandardEntity> stringEntityHashMap = new HashMap<>();
 
     @Inject
     private Metadata metadata;
+
+    private FiasEntity get(String id)
+    {
+        if(stringEntityHashMap.containsKey(id))
+            return (FiasEntity) stringEntityHashMap.get(id);
+        UUID parentId = UUID.fromString(id);
+        FiasEntity parent = dataManager.load(FiasEntity.class).id(parentId).one();
+        stringEntityHashMap.put(id, parent);
+        return parent;
+    }
 
     <T> T getByCode(Class<T> clazz, String code){
         String key = clazz.getName()+code;
