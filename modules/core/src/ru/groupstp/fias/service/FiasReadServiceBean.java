@@ -86,8 +86,7 @@ public class FiasReadServiceBean implements FiasReadService {
         try {
              entity = (FiasEntity) dataManager.load(clazz).id(id).view("parent").one();
         }
-        catch (IllegalStateException e)
-        {
+        catch (IllegalStateException e) {
             entity = (FiasEntity) dataManager.create(clazz);
         }
         finally {
