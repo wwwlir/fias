@@ -1,23 +1,17 @@
 package ru.groupstp.fias.service;
 
 import com.haulmont.cuba.core.entity.StandardEntity;
-import com.haulmont.cuba.core.entity.contracts.Id;
 import com.haulmont.cuba.core.global.DataManager;
-import com.haulmont.cuba.core.global.LoadContext;
 import com.haulmont.cuba.core.global.Metadata;
 import org.meridor.fias.AddressObjects;
-import org.meridor.fias.Fias;
 import org.meridor.fias.FiasClient;
 import org.meridor.fias.enums.AddressLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import ru.groupstp.fias.entity.*;
-import sun.rmi.runtime.Log;
 
 import javax.inject.Inject;
-import javax.persistence.Entity;
-import javax.persistence.NoResultException;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -25,12 +19,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 
 @Service(FiasReadService.NAME)
-public class FiasReadServiceBean implements FiasReadService {
+public class FiasReadWorkerBean implements FiasReadWorker {
 
     private static final Logger log = LoggerFactory.getLogger(FiasReadService.class);
 
@@ -70,7 +62,7 @@ public class FiasReadServiceBean implements FiasReadService {
                 return;
             entity.setCode(getCodeFunction.apply(object));
             try {
-                dataManager.commit(entity);
+                ru.groupstp.fias.entity.FiasEntity commit = dataManager.commit(entity);
             }
             catch (Exception e)
             {
