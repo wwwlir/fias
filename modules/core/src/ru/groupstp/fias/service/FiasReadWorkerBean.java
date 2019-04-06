@@ -22,7 +22,7 @@ import java.util.UUID;
 import java.util.function.Function;
 
 @Service(FiasReadService.NAME)
-public class FiasReadWorkerBean implements FiasReadWorker {
+public class FiasReadWorkerBean implements FiasReadService {
 
     private static final Logger log = LoggerFactory.getLogger(FiasReadService.class);
 
