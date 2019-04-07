@@ -1,6 +1,7 @@
 package ru.groupstp.fias.service;
 
 import com.haulmont.cuba.core.entity.StandardEntity;
+import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
 import com.haulmont.cuba.core.global.Metadata;
 import org.meridor.fias.AddressObjects;
@@ -9,8 +10,10 @@ import org.meridor.fias.enums.AddressLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import ru.groupstp.fias.config.FiasServiceConfig;
 import ru.groupstp.fias.entity.*;
 
+import javax.annotation.PostConstruct;
 import javax.inject.Inject;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
@@ -31,9 +34,15 @@ public class FiasReadWorkerBean implements FiasReadService {
 
     private FiasClient fiasClient;
 
+    @Inject
+    private Configuration configuration;
+
     @Override
     public void readFias() throws FileNotFoundException {
-        Path xmlDirectory = Paths.get("/mnt/sda2/lobo/fias/xml");
+
+        String path = configuration.getConfig(FiasServiceConfig.class).getPath();
+        Path xmlDirectory = Paths.get(path);
+
         fiasClient= new FiasClient(xmlDirectory);
 
         loadObjects(AddressLevel.REGION, Region.class, AddressObjects.Object::getREGIONCODE);
@@ -62,7 +71,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                 return;
             entity.setCode(getCodeFunction.apply(object));
             try {
-                ru.groupstp.fias.entity.FiasEntity commit = dataManager.commit(entity);
+                FiasEntity commit = dataManager.commit(entity);
             }
             catch (Exception e)
             {
