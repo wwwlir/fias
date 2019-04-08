@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<window xmlns="http://schemas.haulmont.com/cuba/window.xsd"
+        caption="msg://browseCaption"
+        class="ru.groupstp.fias.web.house.HouseBrowse"
+        focusComponent="housesTable"
+        lookupComponent="housesTable"
+        messagesPack="ru.groupstp.fias.web.house">
+    <dsContext>
+        <groupDatasource id="housesDs"
+                         class="ru.groupstp.fias.entity.House"
+                         view="parent">
+            <query>
+                <![CDATA[select e from fias$House e]]>
+            </query>
+        </groupDatasource>
+    </dsContext>
+    <dialogMode height="600"
+                width="800"/>
+    <layout expand="housesTable"
+            spacing="true">
+        <filter id="filter"
+                applyTo="housesTable"
+                datasource="housesDs">
+            <properties include=".*"/>
+        </filter>
+        <groupTable id="housesTable"
+                    width="100%">
+            <actions>
+                <action id="create"/>
+                <action id="edit"/>
+                <action id="remove"/>
+            </actions>
+            <columns>
+                <column id="eststatus"/>
+                <column id="buildnum"/>
+                <column id="strucnum"/>
+                <column id="strstatus"/>
+                <column id="startdate"/>
+                <column id="enddate"/>
+                <column id="parent"/>
+            </columns>
+            <rows datasource="housesDs"/>
+            <rowsCount/>
+            <buttonsPanel id="buttonsPanel"
+                          alwaysVisible="true">
+                <button id="createBtn"
+                        action="housesTable.create"/>
+                <button id="editBtn"
+                        action="housesTable.edit"/>
+                <button id="removeBtn"
+                        action="housesTable.remove"/>
+            </buttonsPanel>
+        </groupTable>
+    </layout>
+</window>
