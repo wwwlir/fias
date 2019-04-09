@@ -17,8 +17,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import ru.groupstp.fias.client.FiasClientFork;
 import ru.groupstp.fias.config.FiasServiceConfig;
-import ru.groupstp.fias.entity.FiasEntity;
-import ru.groupstp.fias.entity.House;
+import ru.groupstp.fias.entity.*;
 
 import javax.inject.Inject;
 import java.io.FileNotFoundException;
@@ -50,13 +49,13 @@ public class FiasReadWorkerBean implements FiasReadService {
 
         fiasClient= new FiasClient(xmlDirectory);
 
-//        loadObjects(AddressLevel.REGION, Region.class, AddressObjects.Object::getREGIONCODE);
-//        loadObjects(AddressLevel.AUTONOMY, Autonomy.class, AddressObjects.Object::getCODE);
-//        loadObjects(AddressLevel.AREA, Area.class, AddressObjects.Object::getAREACODE);
-//        loadObjects(AddressLevel.CITY, City.class, AddressObjects.Object::getCITYCODE);
-//        loadObjects(AddressLevel.COMMUNITY, Community.class, AddressObjects.Object::getCODE);
-//        loadObjects(AddressLevel.LOCATION, Location.class, AddressObjects.Object::getCODE);
-//        loadObjects(AddressLevel.STREET, Street.class, AddressObjects.Object::getSTREETCODE);
+        loadObjects(AddressLevel.REGION, Region.class, AddressObjects.Object::getREGIONCODE);
+        loadObjects(AddressLevel.AUTONOMY, Autonomy.class, AddressObjects.Object::getCODE);
+        loadObjects(AddressLevel.AREA, Area.class, AddressObjects.Object::getAREACODE);
+        loadObjects(AddressLevel.CITY, City.class, AddressObjects.Object::getCITYCODE);
+        loadObjects(AddressLevel.COMMUNITY, Community.class, AddressObjects.Object::getCODE);
+        loadObjects(AddressLevel.LOCATION, Location.class, AddressObjects.Object::getCODE);
+        loadObjects(AddressLevel.STREET, Street.class, AddressObjects.Object::getSTREETCODE);
         loadHouses();
 
     }
@@ -92,6 +91,15 @@ public class FiasReadWorkerBean implements FiasReadService {
         final FiasEntity parentEntity = parentOptional.orElse(null);
         if (parentEntity != null){
             house.setValue("parent", parentEntity, true);
+
+            house.setValue("postalcode", fiasHouse.getPOSTALCODE(), true);
+            house.setValue("ifnsfl", fiasHouse.getIFNSFL(), true);
+            house.setValue("terrifnsfl", fiasHouse.getTERRIFNSFL(), true);
+            house.setValue("ifnsul", fiasHouse.getIFNSUL(), true);
+            house.setValue("terrifnsul", fiasHouse.getTERRIFNSUL(), true);
+            house.setValue("okato", fiasHouse.getOKATO(), true);
+            house.setValue("oktmo", fiasHouse.getOKTMO(), true);
+            house.setValue("housenum", fiasHouse.getHOUSENUM(), true);
             house.setValue("eststatus", fiasHouse.getESTSTATUS().intValue(), true);
             house.setValue("buildnum", fiasHouse.getBUILDNUM(), true);
             house.setValue("strstatus", fiasHouse.getSTRSTATUS().intValue(), true);

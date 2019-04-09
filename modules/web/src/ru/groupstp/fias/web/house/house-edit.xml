@@ -24,6 +24,13 @@
                 <field property="startdate"/>
                 <field property="enddate"/>
                 <field property="parent"/>
+                <field property="postalcode"/>
+                <field property="ifnsfl"/>
+                <field property="terrifnsul"/>
+                <field property="ifnsul"/>
+                <field property="okato"/>
+                <field property="oktmo"/>
+                <field property="housenum"/>
             </column>
         </fieldGroup>
         <frame id="windowActions"

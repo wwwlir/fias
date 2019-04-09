@@ -38,6 +38,13 @@
                 <column id="startdate"/>
                 <column id="enddate"/>
                 <column id="parent"/>
+                <column id="postalcode"/>
+                <column id="ifnsfl"/>
+                <column id="terrifnsul"/>
+                <column id="ifnsul"/>
+                <column id="okato"/>
+                <column id="oktmo"/>
+                <column id="housenum"/>
             </columns>
             <rows datasource="housesDs"/>
             <rowsCount/>

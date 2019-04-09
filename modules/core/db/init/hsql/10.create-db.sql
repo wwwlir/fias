@@ -33,13 +33,21 @@ create table FIAS_HOUSE (
     DELETE_TS timestamp,
     DELETED_BY varchar(50),
     --
+    POSTALCODE varchar(6),
+    IFNSFL varchar(4),
+    TERRIFNSFL varchar(4),
+    IFNSUL varchar(4),
+    TERRIFNSUL varchar(4),
+    OKATO varchar(11),
+    OKTMO varchar(11),
+    HOUSENUM varchar(20),
     ESTSTATUS integer,
     BUILDNUM varchar(10),
     STRUCNUM varchar(10),
     STRSTATUS integer,
     STARTDATE timestamp,
     ENDDATE date,
-    PARENT_ID varchar(36),
+    PARENT_ID varchar(36) not null,
     --
     primary key (ID)
 )^
