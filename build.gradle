@@ -49,7 +49,7 @@ dependencies {
 
 }
 
-def postgres = 'org.postgresql:postgresql:9.4.1212'
+def hsql = 'org.hsqldb:hsqldb:2.2.9'
 
 configure([globalModule, coreModule, webModule]) {
     apply(plugin: 'java')
@@ -94,8 +94,8 @@ configure(coreModule) {
     dependencies {
         compile(globalModule)
         provided(servletApi)
-        jdbc(postgres)
-        testRuntime(postgres)
+        jdbc(hsql)
+        testRuntime(hsql)
         compile('org.meridor:fias-client:1.1-SNAPSHOT')
 
     }
@@ -117,19 +117,19 @@ configure(coreModule) {
     }
 
     task createDb(dependsOn: assembleDbScripts, description: 'Creates local database', type: CubaDbCreation) {
-        dbms = 'postgres'
+        dbms = 'hsql'
         host = 'localhost'
         dbName = 'fias'
-        dbUser = 'cuba'
-        dbPassword = 'cuba'
+        dbUser = 'sa'
+        dbPassword = ''
     }
 
     task updateDb(dependsOn: assembleDbScripts, description: 'Updates local database', type: CubaDbUpdate) {
-        dbms = 'postgres'
+        dbms = 'hsql'
         host = 'localhost'
         dbName = 'fias'
-        dbUser = 'cuba'
-        dbPassword = 'cuba'
+        dbUser = 'sa'
+        dbPassword = ''
     }
 }
     

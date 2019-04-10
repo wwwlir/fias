@@ -5,5 +5,6 @@
     <menu id="application-fias"
           insertBefore="administration">
         <item screen="fias$FiasEntity.browse"/>
+        <item screen="fias$House.browse"/>
     </menu>
 </menu-config>

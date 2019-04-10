@@ -11,5 +11,6 @@
         <class>ru.groupstp.fias.entity.FiasEntity</class>
         <class>ru.groupstp.fias.entity.City</class>
         <class>ru.groupstp.fias.entity.Area</class>
+        <class>ru.groupstp.fias.entity.House</class>
     </persistence-unit>
 </persistence>

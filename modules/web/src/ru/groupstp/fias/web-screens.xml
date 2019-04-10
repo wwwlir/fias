@@ -4,4 +4,8 @@
             template="ru/groupstp/fias/web/screens/fiasClient.xml"/>
     <screen id="fias$FiasEntity.browse"
             template="ru/groupstp/fias/web/fiasentity/fias-entity-browse.xml"/>
+    <screen id="fias$House.browse"
+            template="ru/groupstp/fias/web/house/house-browse.xml"/>
+    <screen id="fias$House.edit"
+            template="ru/groupstp/fias/web/house/house-edit.xml"/>
 </screen-config>
