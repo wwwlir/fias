@@ -11,12 +11,12 @@ buildscript {
                 password(rootProject.hasProperty('repoPass') ? rootProject['repoPass'] : 'cuba123')
             }
         }
-        
     }
     dependencies {
         classpath "com.haulmont.gradle:cuba-plugin:$cubaVersion"
     }
 }
+
 
 def modulePrefix = 'app'
 
@@ -41,6 +41,9 @@ cuba {
     }
     ide {
         vcs = 'Git'
+    }
+    uploadRepository {
+        url = myMavenRepoWriteUrl
     }
 }
 
