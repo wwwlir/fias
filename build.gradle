@@ -74,6 +74,7 @@ configure([globalModule, coreModule, webModule]) {
 configure(globalModule) {
 
     dependencies {
+        compile('org.meridor:fias-client:1.1-SNAPSHOT')
     }
     entitiesEnhancing {
         main {
@@ -103,7 +104,6 @@ configure(coreModule) {
         provided(servletApi)
         jdbc(postgres)
         testRuntime(postgres)
-        compile('org.meridor:fias-client:1.1-SNAPSHOT')
 
     }
 

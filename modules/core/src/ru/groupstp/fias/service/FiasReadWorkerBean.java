@@ -1,11 +1,10 @@
 package ru.groupstp.fias.service;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.haulmont.cuba.core.Persistence;
-import com.haulmont.cuba.core.entity.StandardEntity;
 import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
-import com.haulmont.cuba.core.global.Metadata;
 import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
 import org.meridor.fias.FiasClient;
@@ -25,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 @Service(FiasReadService.NAME)
 public class FiasReadWorkerBean implements FiasReadService {
@@ -43,21 +43,39 @@ public class FiasReadWorkerBean implements FiasReadService {
 
     @Override
     public void readFias() throws FileNotFoundException {
+        readFias(new HashMap<>());
+    }
 
+    @Override
+    public void readFias(Map<Object, Object> options) throws FileNotFoundException {
         String path = configuration.getConfig(FiasServiceConfig.class).getPath();
         xmlDirectory = Paths.get(path);
-
         fiasClient= new FiasClient(xmlDirectory);
+        UUID regionId = ((UUID) options.getOrDefault("regionId", null));
 
-        loadObjects(AddressLevel.REGION, Region.class, AddressObjects.Object::getREGIONCODE);
-        loadObjects(AddressLevel.AUTONOMY, Autonomy.class, AddressObjects.Object::getCODE);
-        loadObjects(AddressLevel.AREA, Area.class, AddressObjects.Object::getAREACODE);
-        loadObjects(AddressLevel.CITY, City.class, AddressObjects.Object::getCITYCODE);
-        loadObjects(AddressLevel.COMMUNITY, Community.class, AddressObjects.Object::getCODE);
-        loadObjects(AddressLevel.LOCATION, Location.class, AddressObjects.Object::getCODE);
-        loadObjects(AddressLevel.STREET, Street.class, AddressObjects.Object::getSTREETCODE);
-        loadHouses();
-
+        if ((boolean) options.getOrDefault(AddressLevel.REGION, true))
+            loadObjects(Region.class, AddressObjects.Object::getREGIONCODE,
+                    o -> o.getAOLEVEL().equals(AddressLevel.REGION.getAddressLevel()));
+        if ((boolean) options.getOrDefault(AddressLevel.AUTONOMY, true))
+            loadObjects(Autonomy.class, AddressObjects.Object::getCODE,
+                    o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+        if ((boolean) options.getOrDefault(AddressLevel.AREA, true))
+            loadObjects(Area.class, AddressObjects.Object::getAREACODE,
+                    o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+        if ((boolean) options.getOrDefault(AddressLevel.CITY, true))
+            loadObjects(City.class, AddressObjects.Object::getCITYCODE,
+                    o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+        if ((boolean) options.getOrDefault(AddressLevel.COMMUNITY, true))
+            loadObjects(Community.class, AddressObjects.Object::getCODE
+                    , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+        if ((boolean) options.getOrDefault(AddressLevel.LOCATION, true))
+            loadObjects(Location.class, AddressObjects.Object::getCODE
+                    , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+        if ((boolean) options.getOrDefault(AddressLevel.STREET, true))
+            loadObjects(Street.class, AddressObjects.Object::getSTREETCODE,
+                    o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+        if ((boolean) options.getOrDefault("needLoadHouses", true))
+            loadHouses();
     }
 
     private void loadHouses() throws FileNotFoundException {
@@ -137,87 +155,89 @@ public class FiasReadWorkerBean implements FiasReadService {
     }
 
 
-    private void loadObjects(AddressLevel level, Class clazz, Function<AddressObjects.Object, String> getCodeFunction)
+    private void loadObjects(Class<? extends FiasEntity> clazz
+            , Function<AddressObjects.Object, String> getCodeFunction
+            , Predicate<AddressObjects.Object> predicate)
     {
-        log.debug("Loading objects of level {}", level.name());
-        List<AddressObjects.Object> objects = fiasClient.load(o -> o.getAOLEVEL().equals(level.getAddressLevel()));
-//        if(objects.size()>0)
-//            loader.accept(objects.get(0));
+        log.debug("Loading objects of class {}", clazz.getSimpleName());
+        List<AddressObjects.Object> objects = fiasClient.load(predicate);
+
         objects.forEach(object -> {
             FiasEntity entity = loadFiasEntity(clazz, object);
             if(entity==null)
                 return;
             entity.setCode(getCodeFunction.apply(object));
-            try {
-                FiasEntity commit = dataManager.commit(entity);
-            }
-            catch (Exception e)
-            {
-                log.error("Error while commit {}: {}, {}", clazz.getSimpleName(), entity.getName(), e.getMessage());
-            }
+            if (persistence.getTools().isDirty(entity) || PersistenceHelper.isNew(entity))
+                try {
+                    dataManager.commit(entity);
+                }
+                catch (Exception e){
+                    log.error("Error while commit {}: {}, {}", clazz.getSimpleName(), entity.getName(), e.getMessage());
+                }
         });
     }
 
-    private FiasEntity loadFiasEntity(Class clazz, AddressObjects.Object object)
-    {
-        UUID id = UUID.fromString(object.getAOGUID());
-        FiasEntity entity = null;
+    private boolean testRegion(String parentguid, UUID requiredId) {
+        if (requiredId == null) return true;
+        if (parentguid == null) return false;
+        UUID parentId;
         try {
-            entity = (FiasEntity) dataManager.load(clazz).id(id).view("parent").one();
+            parentId = UUID.fromString(parentguid);
+        } catch (IllegalArgumentException e) {
+            log.warn("Wrong parentguid format. Value: {}", parentguid);
+            return false;
         }
-        catch (IllegalStateException e) {
-            entity = (FiasEntity) dataManager.create(clazz);
+        if (parentId.equals(requiredId))
+            return true;
+        else {
+            Optional<FiasEntity> entity = dataManager.load(FiasEntity.class)
+                    .view("parent")
+                    .id(parentId)
+                    .optional();
+            if (entity.isPresent()) {
+                FiasEntity parent = entity.get().getParent();
+                if (parent!=null)
+                    return testRegion(parent.getId().toString(), requiredId);
+            }
         }
-        finally {
-            entity.setId(id);
-            entity.setValue("name", object.getOFFNAME());
-            entity.setValue("offname", object.getOFFNAME());
-            entity.setValue("shortname", object.getSHORTNAME());
-            entity.setValue("formalname", object.getFORMALNAME());
-            entity.setPostalCode(object.getPOSTALCODE());
-            try {
-                if(object.getPARENTGUID()!=null) {
-                    entity.setParent(get(object.getPARENTGUID()));
-                }
-            }
-            catch (Exception y)
-            {
-                log.error("Error while loading {}: {}, {}", clazz.getSimpleName(), entity.getName(), y.getMessage());
-                return null;
-            }
+        return false;
+    }
 
-            List<String> names = new ArrayList<>();
-            names.add(object.getFORMALNAME());
-            names.add(object.getOFFNAME());
-            entity.setValue("possibleNames", String.join(",", names));
+    private <T extends FiasEntity> FiasEntity loadFiasEntity(Class<T> clazz, AddressObjects.Object object){
+        if (object.getPARENTGUID() == null && !AddressLevel.REGION.getAddressLevel().equals(object.getAOLEVEL())) {
+            log.warn("Missing parent ID (PARENTGUID) for element id={}, name={}", object.getAOGUID(), object.getOFFNAME());
+            return null;
         }
+        UUID id = UUID.fromString(object.getAOGUID());
+        FiasEntity entity = dataManager.load(clazz)
+                .id(id)
+                .view("parent")
+                .optional()
+                .orElseGet(() -> {
+                    T newEntity = dataManager.create(clazz);
+                    newEntity.setId(id);
+                    return newEntity;
+                });
+        UUID parentId;
+        FiasEntity parent = null;
+        if (object.getPARENTGUID() != null) {
+            parentId = UUID.fromString(object.getPARENTGUID());
+            parent = dataManager.load(FiasEntity.class)
+                    .id(parentId)
+                    .optional()
+                    .orElse(null);
+        }
+        if (parent == null)
+            return null;
+
+        entity.setValue("name", object.getOFFNAME(), true);
+        entity.setValue("offname", object.getOFFNAME(), true);
+        entity.setValue("shortname", object.getSHORTNAME(), true);
+        entity.setValue("formalname", object.getFORMALNAME(), true);
+        entity.setValue("postalCode", object.getPOSTALCODE(), true);
+        entity.setValue("parent", parent, true);
+        List<String> names = Lists.newArrayList(object.getFORMALNAME(), object.getOFFNAME());
+        entity.setValue("possibleNames", String.join(",", names), true);
         return entity;
     }
-
-    private static HashMap <String, StandardEntity> stringEntityHashMap = new HashMap<>();
-
-    @Inject
-    private Metadata metadata;
-
-    private FiasEntity get(String id)
-    {
-        if(stringEntityHashMap.containsKey(id))
-            return (FiasEntity) stringEntityHashMap.get(id);
-        UUID parentId = UUID.fromString(id);
-        FiasEntity parent = dataManager.load(FiasEntity.class).id(parentId).one();
-        stringEntityHashMap.put(id, parent);
-        return parent;
-    }
-
-    <T> T getByCode(Class<T> clazz, String code){
-        String key = clazz.getName()+code;
-        if(stringEntityHashMap.containsKey(key))
-            return (T) stringEntityHashMap.get(key);
-        T entity = dataManager.loadValue("select e from fias$"+clazz.getSimpleName()+" e where e.code=:code", clazz).
-                parameter("code", code).one();
-
-        stringEntityHashMap.put(key,  (StandardEntity) entity);
-        return entity;
-    }
-
 }
