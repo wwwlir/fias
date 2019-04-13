@@ -44,7 +44,10 @@
     </view>
     <view class="ru.groupstp.fias.entity.Street"
           extends="_local"
-          name="parent"/>
+          name="parent">
+        <property name="parent"
+                  view="_minimal"/>
+    </view>
     <view class="ru.groupstp.fias.entity.House"
           extends="_local"
           name="parent">

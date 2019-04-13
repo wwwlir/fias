@@ -17,8 +17,7 @@ buildscript {
     }
 }
 
-
-def modulePrefix = 'app'
+def modulePrefix = 'fias'
 
 def globalModule = project(":${modulePrefix}-global")
 def coreModule = project(":${modulePrefix}-core")
@@ -52,7 +51,7 @@ dependencies {
 
 }
 
-def hsql = 'org.hsqldb:hsqldb:2.2.9'
+def postgres = 'org.postgresql:postgresql:9.4.1212'
 
 configure([globalModule, coreModule, webModule]) {
     apply(plugin: 'java')
@@ -77,6 +76,7 @@ configure([globalModule, coreModule, webModule]) {
 configure(globalModule) {
 
     dependencies {
+        compile('org.meridor:fias-client:1.1-SNAPSHOT')
     }
     entitiesEnhancing {
         main {
@@ -84,7 +84,14 @@ configure(globalModule) {
         }
     }
 
-    
+    jar {
+        manifest {
+            attributes('App-Component-Id': cuba.artifact.group)
+            attributes('App-Component-Version': cuba.artifact.version + (cuba.artifact.isSnapshot ? '-SNAPSHOT' : ''))
+        }
+    }
+
+
 }
 
 configure(coreModule) {
@@ -97,9 +104,8 @@ configure(coreModule) {
     dependencies {
         compile(globalModule)
         provided(servletApi)
-        jdbc(hsql)
-        testRuntime(hsql)
-        compile('org.meridor:fias-client:1.1-SNAPSHOT')
+        jdbc(postgres)
+        testRuntime(postgres)
 
     }
 
@@ -120,19 +126,19 @@ configure(coreModule) {
     }
 
     task createDb(dependsOn: assembleDbScripts, description: 'Creates local database', type: CubaDbCreation) {
-        dbms = 'hsql'
+        dbms = 'postgres'
         host = 'localhost'
         dbName = 'fias'
-        dbUser = 'sa'
-        dbPassword = ''
+        dbUser = 'cuba'
+        dbPassword = 'cuba'
     }
 
     task updateDb(dependsOn: assembleDbScripts, description: 'Updates local database', type: CubaDbUpdate) {
-        dbms = 'hsql'
+        dbms = 'postgres'
         host = 'localhost'
         dbName = 'fias'
-        dbUser = 'sa'
-        dbPassword = ''
+        dbUser = 'cuba'
+        dbPassword = 'cuba'
     }
 }
     
