@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<window xmlns="http://schemas.haulmont.com/cuba/window.xsd"
+        caption="msg://editorCaption"
+        class="com.groupstp.fias.web.fiasentity.FiasEntityEdit"
+        datasource="fiasEntityDs"
+        focusComponent="fieldGroup"
+        messagesPack="com.groupstp.fias.web.fiasentity">
+    <dsContext>
+        <datasource id="fiasEntityDs"
+                    class="com.groupstp.fias.entity.FiasEntity"
+                    view="parent"/>
+    </dsContext>
+    <dialogMode height="600"
+                width="800"/>
+    <layout expand="windowActions"
+            spacing="true">
+        <fieldGroup id="fieldGroup"
+                    datasource="fiasEntityDs">
+            <column width="350px">
+                <field property="name"/>
+                <field property="parent"/>
+                <field property="postalCode"/>
+                <field property="offname"/>
+                <field property="formalname"/>
+                <field property="possibleNames"
+                       rows="5"/>
+                <field property="code"/>
+                <field property="shortname"/>
+            </column>
+        </fieldGroup>
+        <frame id="windowActions"
+               screen="editWindowActions"/>
+    </layout>
+</window>

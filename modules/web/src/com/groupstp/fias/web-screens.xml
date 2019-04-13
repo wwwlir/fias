@@ -8,4 +8,6 @@
             template="com/groupstp/fias/web/house/house-browse.xml"/>
     <screen id="fias$House.edit"
             template="com/groupstp/fias/web/house/house-edit.xml"/>
+    <screen id="fias$FiasEntity.edit"
+            template="com/groupstp/fias/web/fiasentity/fias-entity-edit.xml"/>
 </screen-config>

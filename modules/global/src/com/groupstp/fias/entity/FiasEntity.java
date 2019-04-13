@@ -5,7 +5,7 @@ import com.haulmont.cuba.core.entity.StandardEntity;
 
 import javax.persistence.*;
 
-@NamePattern("%s|name")
+@NamePattern("%s %s|shortname,name")
 @Table(name = "FIAS_FIAS_ENTITY")
 @Entity(name = "fias$FiasEntity")
 public class FiasEntity extends StandardEntity {

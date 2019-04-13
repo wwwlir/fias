@@ -37,7 +37,9 @@
                 <column id="strstatus"/>
                 <column id="startdate"/>
                 <column id="enddate"/>
-                <column id="parent"/>
+                <column id="parent"
+                        link="true"
+                        linkScreen="fias$FiasEntity.edit"/>
                 <column id="postalcode"/>
                 <column id="ifnsfl"/>
                 <column id="terrifnsul"/>
