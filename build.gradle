@@ -42,6 +42,9 @@ cuba {
     ide {
         vcs = 'Git'
     }
+    uploadRepository {
+        url = myMavenRepoWriteUrl
+    }
 }
 
 dependencies {
@@ -89,7 +92,7 @@ configure(globalModule) {
         }
     }
 
-    
+
 }
 
 configure(coreModule) {
