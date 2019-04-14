@@ -239,6 +239,12 @@ public class FiasReadWorkerBean implements FiasReadService {
         entity.setValue("parent", parent, true);
         List<String> names = Lists.newArrayList(object.getFORMALNAME(), object.getOFFNAME());
         entity.setValue("possibleNames", String.join(",", names), true);
+
+        entity.setValue("updatedate", object.getUPDATEDATE().toGregorianCalendar().getTime(), true);
+        entity.setValue("actstatus", object.getACTSTATUS().intValue(), true);
+        entity.setValue("operstatus", object.getOPERSTATUS().intValue(), true);
+        entity.setValue("startdate", object.getSTARTDATE().toGregorianCalendar().getTime(), true);
+        entity.setValue("enddate", object.getENDDATE().toGregorianCalendar().getTime(), true);
         return entity;
     }
 }

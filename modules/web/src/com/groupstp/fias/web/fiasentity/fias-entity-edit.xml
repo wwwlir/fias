@@ -26,6 +26,11 @@
                        rows="5"/>
                 <field property="code"/>
                 <field property="shortname"/>
+                <field property="updatedate"/>
+                <field property="actstatus"/>
+                <field property="operstatus"/>
+                <field property="startdate"/>
+                <field property="enddate"/>
             </column>
         </fieldGroup>
         <frame id="windowActions"

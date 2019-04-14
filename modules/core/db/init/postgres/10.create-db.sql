@@ -18,6 +18,11 @@ create table FIAS_FIAS_ENTITY (
     POSSIBLE_NAMES text,
     CODE varchar(255),
     SHORTNAME varchar(10),
+    UPDATEDATE date,
+    ACTSTATUS integer,
+    OPERSTATUS integer,
+    STARTDATE date,
+    ENDDATE date,
     --
     primary key (ID)
 )^

@@ -1,9 +1,12 @@
 package com.groupstp.fias.entity;
 
+import com.groupstp.fias.entity.enums.FiasEntityOperationStatus;
+import com.groupstp.fias.entity.enums.FiasEntityStatus;
 import com.haulmont.chile.core.annotations.NamePattern;
 import com.haulmont.cuba.core.entity.StandardEntity;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @NamePattern("%s %s|shortname,name")
 @Table(name = "FIAS_FIAS_ENTITY")
@@ -36,6 +39,76 @@ public class FiasEntity extends StandardEntity {
 
     @Column(name = "SHORTNAME", length = 10)
     protected String shortname;
+
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "UPDATEDATE")
+    protected Date updatedate;
+
+    @Column(name = "ACTSTATUS")
+    protected Integer actstatus;
+
+    @Column(name = "OPERSTATUS")
+    protected Integer operstatus;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "STARTDATE")
+    protected Date startdate;
+
+    @Temporal(TemporalType.DATE)
+    @Column(name = "ENDDATE")
+    protected Date enddate;
+
+    public Date getEnddate() {
+        return enddate;
+    }
+
+    public void setEnddate(Date enddate) {
+        this.enddate = enddate;
+    }
+
+
+    public void setStartdate(Date startdate) {
+        this.startdate = startdate;
+    }
+
+    public Date getStartdate() {
+        return startdate;
+    }
+
+
+    public void setActstatus(FiasEntityStatus actstatus) {
+        this.actstatus = actstatus == null ? null : actstatus.getId();
+    }
+
+    public void setActstatusRaw(int actstatus) {
+        this.actstatus = actstatus;
+    }
+
+    public FiasEntityStatus getActstatus() {
+        return actstatus == null ? null : FiasEntityStatus.fromId(actstatus);
+    }
+
+    public void setOperstatus(FiasEntityOperationStatus operstatus) {
+        this.operstatus = operstatus == null ? null : operstatus.getId();
+    }
+
+    public void setOperstatusRaw(int operstatus) {
+        this.operstatus = operstatus;
+    }
+
+    public FiasEntityOperationStatus getOperstatus() {
+        return operstatus == null ? null : FiasEntityOperationStatus.fromId(operstatus);
+    }
+
+
+    public void setUpdatedate(Date updatedate) {
+        this.updatedate = updatedate;
+    }
+
+    public Date getUpdatedate() {
+        return updatedate;
+    }
 
 
     public void setParent(FiasEntity parent) {

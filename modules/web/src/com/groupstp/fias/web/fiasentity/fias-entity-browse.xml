@@ -43,6 +43,11 @@
                 <column id="formalname"/>
                 <column id="possibleNames"/>
                 <column id="code"/>
+                <column id="updatedate"/>
+                <column id="actstatus"/>
+                <column id="operstatus"/>
+                <column id="startdate"/>
+                <column id="enddate"/>
             </columns>
             <rows datasource="fiasEntitiesDs"/>
             <rowsCount/>
