@@ -204,7 +204,8 @@ public class FiasReadWorkerBean implements FiasReadService {
     }
 
     private <T extends FiasEntity> FiasEntity loadFiasEntity(Class<T> clazz, AddressObjects.Object object){
-        if (object.getPARENTGUID() == null && !AddressLevel.REGION.getAddressLevel().equals(object.getAOLEVEL())) {
+        boolean isRegionObject = AddressLevel.REGION.getAddressLevel().equals(object.getAOLEVEL());
+        if (object.getPARENTGUID() == null && !isRegionObject) {
             log.warn("Missing parent ID (PARENTGUID) for element id={}, name={}", object.getAOGUID(), object.getOFFNAME());
             return null;
         }
@@ -227,7 +228,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                     .optional()
                     .orElse(null);
         }
-        if (parent == null)
+        if (parent == null && !isRegionObject)
             return null;
 
         entity.setValue("name", object.getOFFNAME(), true);
