@@ -81,20 +81,12 @@ public class FiasEntity extends StandardEntity {
         this.actstatus = actstatus == null ? null : actstatus.getId();
     }
 
-    public void setActstatusRaw(int actstatus) {
-        this.actstatus = actstatus;
-    }
-
     public FiasEntityStatus getActstatus() {
         return actstatus == null ? null : FiasEntityStatus.fromId(actstatus);
     }
 
     public void setOperstatus(FiasEntityOperationStatus operstatus) {
         this.operstatus = operstatus == null ? null : operstatus.getId();
-    }
-
-    public void setOperstatusRaw(int operstatus) {
-        this.operstatus = operstatus;
     }
 
     public FiasEntityOperationStatus getOperstatus() {

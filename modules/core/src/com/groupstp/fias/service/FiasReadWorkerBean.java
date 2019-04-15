@@ -5,10 +5,11 @@ import com.google.common.collect.Lists;
 import com.groupstp.fias.client.FiasClientFork;
 import com.groupstp.fias.config.FiasServiceConfig;
 import com.groupstp.fias.entity.*;
+import com.groupstp.fias.entity.enums.FiasEntityOperationStatus;
+import com.groupstp.fias.entity.enums.FiasEntityStatus;
 import com.haulmont.cuba.core.Persistence;
 import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
-import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
 import org.meridor.fias.FiasClient;
 import org.meridor.fias.Houses;
@@ -89,47 +90,49 @@ public class FiasReadWorkerBean implements FiasReadService {
     }
 
     private void processHouseEntity(Houses.House fiasHouse, House house) {
-        final String aoguid = fiasHouse.getAOGUID();
-        if (Strings.isNullOrEmpty(aoguid)) {
-            log.warn("Missing parent ID (AOGUID) for element {} with id: {}",
-                    Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
-            return;
-        }
-        final UUID parentId;
-        try {
-            parentId = UUID.fromString(aoguid);
-        } catch (IllegalArgumentException e) {
-            log.warn("Wrong parent ID format (AOGUID) for element {} with id: {}",
-                    Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
-            return;
-        }
+        persistence.runInTransaction(em -> {
+            final String aoguid = fiasHouse.getAOGUID();
+            if (Strings.isNullOrEmpty(aoguid)) {
+                log.warn("Missing parent ID (AOGUID) for element {} with id: {}",
+                        Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
+                return;
+            }
+            final UUID parentId;
+            try {
+                parentId = UUID.fromString(aoguid);
+            } catch (IllegalArgumentException e) {
+                log.warn("Wrong parent ID format (AOGUID) for element {} with id: {}",
+                        Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
+                return;
+            }
 
-        final Optional<FiasEntity> parentOptional = dataManager.load(FiasEntity.class)
-                .id(parentId).optional();
-        final FiasEntity parentEntity = parentOptional.orElse(null);
-        if (parentEntity != null){
-            house.setValue("parent", parentEntity, true);
+            final Optional<FiasEntity> parentOptional = dataManager.load(FiasEntity.class)
+                    .id(parentId).optional();
+            final FiasEntity parentEntity = parentOptional.orElse(null);
+            if (parentEntity != null){
+                em.merge(house);
+                house.setValue("parent", parentEntity, true);
 
-            house.setValue("postalcode", fiasHouse.getPOSTALCODE(), true);
-            house.setValue("ifnsfl", fiasHouse.getIFNSFL(), true);
-            house.setValue("terrifnsfl", fiasHouse.getTERRIFNSFL(), true);
-            house.setValue("ifnsul", fiasHouse.getIFNSUL(), true);
-            house.setValue("terrifnsul", fiasHouse.getTERRIFNSUL(), true);
-            house.setValue("okato", fiasHouse.getOKATO(), true);
-            house.setValue("oktmo", fiasHouse.getOKTMO(), true);
-            house.setValue("housenum", fiasHouse.getHOUSENUM(), true);
-            house.setValue("eststatus", fiasHouse.getESTSTATUS().intValue(), true);
-            house.setValue("buildnum", fiasHouse.getBUILDNUM(), true);
-            house.setValue("strstatus", fiasHouse.getSTRSTATUS().intValue(), true);
-            house.setValue("strucnum", fiasHouse.getSTRUCNUM(), true);
-            house.setValue("startdate", fiasHouse.getSTARTDATE().toGregorianCalendar().getTime(), true);
-            house.setValue("enddate", fiasHouse.getENDDATE().toGregorianCalendar().getTime(), true);
-            if (persistence.getTools().isDirty(house) || PersistenceHelper.isNew(house))
-                dataManager.commit(house);
-        } else {
-            log.warn("Was unable to find parent (id={}) for element {} with id={}"
-                    , fiasHouse.getAOGUID(), Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
-        }
+                house.setValue("postalcode", fiasHouse.getPOSTALCODE(), true);
+                house.setValue("ifnsfl", fiasHouse.getIFNSFL(), true);
+                house.setValue("terrifnsfl", fiasHouse.getTERRIFNSFL(), true);
+                house.setValue("ifnsul", fiasHouse.getIFNSUL(), true);
+                house.setValue("terrifnsul", fiasHouse.getTERRIFNSUL(), true);
+                house.setValue("okato", fiasHouse.getOKATO(), true);
+                house.setValue("oktmo", fiasHouse.getOKTMO(), true);
+                house.setValue("housenum", fiasHouse.getHOUSENUM(), true);
+                house.setValue("eststatus", fiasHouse.getESTSTATUS().intValue(), true);
+                house.setValue("buildnum", fiasHouse.getBUILDNUM(), true);
+                house.setValue("strstatus", fiasHouse.getSTRSTATUS().intValue(), true);
+                house.setValue("strucnum", fiasHouse.getSTRUCNUM(), true);
+                house.setValue("startdate", fiasHouse.getSTARTDATE().toGregorianCalendar().getTime(), true);
+                house.setValue("enddate", fiasHouse.getENDDATE().toGregorianCalendar().getTime(), true);
+
+            } else {
+                log.warn("Was unable to find parent (id={}) for element {} with id={}"
+                        , fiasHouse.getAOGUID(), Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
+            }
+        });
     }
 
     private House getHouseEntity(Houses.House fiasHouse) {
@@ -162,19 +165,13 @@ public class FiasReadWorkerBean implements FiasReadService {
         log.debug("Loading objects of class {}", clazz.getSimpleName());
         List<AddressObjects.Object> objects = fiasClient.load(predicate);
 
-        objects.forEach(object -> {
-            FiasEntity entity = loadFiasEntity(clazz, object);
-            if(entity==null)
-                return;
-            entity.setCode(getCodeFunction.apply(object));
-            if (persistence.getTools().isDirty(entity) || PersistenceHelper.isNew(entity))
-                try {
-                    dataManager.commit(entity);
-                }
-                catch (Exception e){
-                    log.error("Error while commit {}: {}, {}", clazz.getSimpleName(), entity.getName(), e.getMessage());
-                }
-        });
+        objects.forEach(object ->
+                persistence.runInTransaction(em -> {
+                    FiasEntity entity = loadFiasEntity(clazz, object);
+                    if(entity==null)
+                        return;
+                    entity.setCode(getCodeFunction.apply(object));
+                }));
     }
 
     private boolean testRegion(String parentguid, UUID requiredId) {
@@ -210,7 +207,7 @@ public class FiasReadWorkerBean implements FiasReadService {
             return null;
         }
         UUID id = UUID.fromString(object.getAOGUID());
-        FiasEntity entity = dataManager.load(clazz)
+        FiasEntity entity = dataManager.load(FiasEntity.class)
                 .id(id)
                 .view("parent")
                 .optional()
@@ -219,6 +216,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                     newEntity.setId(id);
                     return newEntity;
                 });
+        entity = persistence.getEntityManager().merge(entity);
         UUID parentId;
         FiasEntity parent = null;
         if (object.getPARENTGUID() != null) {
@@ -241,8 +239,8 @@ public class FiasReadWorkerBean implements FiasReadService {
         entity.setValue("possibleNames", String.join(",", names), true);
 
         entity.setValue("updatedate", object.getUPDATEDATE().toGregorianCalendar().getTime(), true);
-        entity.setValue("actstatus", object.getACTSTATUS().intValue(), true);
-        entity.setValue("operstatus", object.getOPERSTATUS().intValue(), true);
+        entity.setValue("actstatus", FiasEntityStatus.fromId(object.getACTSTATUS().intValue()), true);
+        entity.setValue("operstatus", FiasEntityOperationStatus.fromId(object.getOPERSTATUS().intValue()), true);
         entity.setValue("startdate", object.getSTARTDATE().toGregorianCalendar().getTime(), true);
         entity.setValue("enddate", object.getENDDATE().toGregorianCalendar().getTime(), true);
         return entity;
