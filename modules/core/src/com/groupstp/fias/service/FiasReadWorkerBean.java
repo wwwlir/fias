@@ -89,7 +89,7 @@ public class FiasReadWorkerBean implements FiasReadService {
         }
     }
 
-    private void processHouseEntity(Houses.House fiasHouse, House house) {
+    private void processHouseEntity(Houses.House fiasHouse, House entity) {
         persistence.runInTransaction(em -> {
             final String aoguid = fiasHouse.getAOGUID();
             if (Strings.isNullOrEmpty(aoguid)) {
@@ -106,11 +106,12 @@ public class FiasReadWorkerBean implements FiasReadService {
                 return;
             }
 
-            final Optional<FiasEntity> parentOptional = dataManager.load(FiasEntity.class)
-                    .id(parentId).optional();
-            final FiasEntity parentEntity = parentOptional.orElse(null);
+            final FiasEntity parentEntity = dataManager.load(FiasEntity.class)
+                    .id(parentId)
+                    .optional()
+                    .orElse(null);
             if (parentEntity != null){
-                em.merge(house);
+                House house = em.merge(entity);
                 house.setValue("parent", parentEntity, true);
 
                 house.setValue("postalcode", fiasHouse.getPOSTALCODE(), true);
@@ -146,15 +147,15 @@ public class FiasReadWorkerBean implements FiasReadService {
             return null;
         }
 
-        final Optional<House> optionalHouse = dataManager.load(House.class)
+        return dataManager.load(House.class)
                 .id(entityId)
                 .view("parent")
-                .optional();
-        return optionalHouse.orElseGet(() -> {
-            final House newEntity = dataManager.create(House.class);
-            newEntity.setId(entityId);
-            return newEntity;
-        });
+                .optional()
+                .orElseGet(() -> {
+                    final House newEntity = dataManager.create(House.class);
+                    newEntity.setId(entityId);
+                    return newEntity;
+                });
     }
 
 
