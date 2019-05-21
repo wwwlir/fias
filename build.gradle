@@ -11,6 +11,9 @@ buildscript {
                 password(rootProject.hasProperty('repoPass') ? rootProject['repoPass'] : 'cuba123')
             }
         }
+        maven {
+            url = myMavenRepoReadUrl
+        }
     }
     dependencies {
         classpath "com.haulmont.gradle:cuba-plugin:$cubaVersion"
@@ -31,7 +34,7 @@ apply(plugin: 'cuba')
 
 cuba {
     artifact {
-        group = 'ru.groupstp.fias'
+        group = 'com.groupstp.fias'
         version = '0.1'
         isSnapshot = true
     }
@@ -165,7 +168,7 @@ configure(webModule) {
 
     task deployConf(type: Copy) {
         from file('src')
-        include "ru/groupstp/fias/**"
+        include "com/groupstp/fias/**"
         into "$cuba.tomcat.dir/conf/${modulePrefix}"
     }
 

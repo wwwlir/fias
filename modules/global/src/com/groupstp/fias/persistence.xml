@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+             version="2.0">
+    <persistence-unit name="fias"
+                      transaction-type="RESOURCE_LOCAL">
+        <class>com.groupstp.fias.entity.Region</class>
+        <class>com.groupstp.fias.entity.Autonomy</class>
+        <class>com.groupstp.fias.entity.Community</class>
+        <class>com.groupstp.fias.entity.Location</class>
+        <class>com.groupstp.fias.entity.Street</class>
+        <class>com.groupstp.fias.entity.FiasEntity</class>
+        <class>com.groupstp.fias.entity.City</class>
+        <class>com.groupstp.fias.entity.Area</class>
+        <class>com.groupstp.fias.entity.House</class>
+    </persistence-unit>
+</persistence>
