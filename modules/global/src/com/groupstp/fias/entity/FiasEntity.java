@@ -9,7 +9,7 @@ import javax.persistence.*;
 import java.util.Date;
 
 @NamePattern("%s %s|shortname,name")
-@Table(name = "FIAS_FIAS_ENTITY")
+@Table(name = "FIAS_ENTITY")
 @Entity(name = "fias$FiasEntity")
 public class FiasEntity extends StandardEntity {
     private static final long serialVersionUID = 5234139283100152959L;
