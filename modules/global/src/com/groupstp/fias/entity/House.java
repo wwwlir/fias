@@ -6,7 +6,7 @@ import javax.persistence.*;
 import javax.validation.constraints.NotNull;
 import java.util.Date;
 
-@Table(name = "FIAS_HOUSE")
+@Table(name = "HOUSE")
 @Entity(name = "fias$House")
 public class House extends StandardEntity {
     private static final long serialVersionUID = 101923876676193777L;

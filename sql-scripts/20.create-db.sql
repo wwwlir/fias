@@ -1,0 +1,4 @@
+-- begin FIAS_FIAS_ENTITY
+alter table FIAS_ENTITY add constraint FK_FIAS_ENTITY_ON_PARENT foreign key (PARENT_ID) references FIAS_ENTITY(ID)^
+create index IDX_FIAS_ENTITY_ON_PARENT on FIAS_ENTITY (PARENT_ID)^
+-- end FIAS_FIAS_ENTITY

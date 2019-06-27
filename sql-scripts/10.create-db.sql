@@ -1,5 +1,5 @@
 -- begin FIAS_FIAS_ENTITY
-create table FIAS_FIAS_ENTITY (
+create table FIAS_ENTITY (
     ID uuid,
     VERSION integer not null,
     CREATE_TS timestamp,

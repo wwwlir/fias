@@ -11,6 +11,16 @@
               username="cuba"/>
     <!-- Switch off session serialization -->
     <Manager pathname=""/>
+    <!--Data store 'fiasDs' connection-->
+    <Resource driverClassName="org.postgresql.Driver"
+              maxIdle="2"
+              maxTotal="20"
+              maxWaitMillis="5000"
+              name="jdbc/fiasDs"
+              password="cuba"
+              type="javax.sql.DataSource"
+              url="jdbc:postgresql://localhost/fias_ds"
+              username="cuba"/>
     <!--<Resource driverClassName="org.hsqldb.jdbc.JDBCDriver"
           maxIdle="2"
           maxTotal="20"
