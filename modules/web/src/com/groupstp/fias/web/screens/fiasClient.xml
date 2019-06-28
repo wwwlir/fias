@@ -38,10 +38,10 @@
                   caption="msg://streetCheckField"/>
         <checkBox id="houseCheckField"
                   caption="msg://houseCheckField"/>
-        <lookupField id="regionField"
+        <lookupField id="regionField" width="400px"
                      caption="msg://regionToLoadField"
                      optionsDatasource="regionsDs"/>
-        <lookupField id="cityField"
+        <lookupField id="cityField" width="400px"
                      caption="msg://cityToLoadField"
                      optionsDatasource="citiesDs"/>
         <buttonsPanel id="buttonPanel">
@@ -49,7 +49,7 @@
                     caption="msg://loadDataBtn"
                     invoke="onBtnClick"/>
             <progressBar id="progressBar"
-                         indeterminate="false"/>
+                         indeterminate="false" width="335px"/>
         </buttonsPanel>
     </layout>
 </window>
