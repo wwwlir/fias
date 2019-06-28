@@ -53,28 +53,32 @@ public class FiasReadWorkerBean implements FiasReadService {
         xmlDirectory = Paths.get(path);
         fiasClient= new FiasClient(xmlDirectory);
         UUID regionId = ((UUID) options.getOrDefault("regionId", null));
+        UUID cityId = ((UUID) options.getOrDefault("cityId", null));
 
         if ((boolean) options.getOrDefault(AddressLevel.REGION, true))
             loadObjects(Region.class, AddressObjects.Object::getREGIONCODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.REGION.getAddressLevel()));
         if ((boolean) options.getOrDefault(AddressLevel.AUTONOMY, true))
             loadObjects(Autonomy.class, AddressObjects.Object::getCODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.AREA, true))
             loadObjects(Area.class, AddressObjects.Object::getAREACODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.CITY, true))
             loadObjects(City.class, AddressObjects.Object::getCITYCODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.COMMUNITY, true))
             loadObjects(Community.class, AddressObjects.Object::getCODE
-                    , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel())
+                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault(AddressLevel.LOCATION, true))
             loadObjects(Location.class, AddressObjects.Object::getCODE
-                    , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel())
+                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault(AddressLevel.STREET, true))
             loadObjects(Street.class, AddressObjects.Object::getSTREETCODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel())
+                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault("needLoadHouses", true))
             loadHouses();
     }
@@ -175,7 +179,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                 }));
     }
 
-    private boolean testRegion(String parentguid, UUID requiredId) {
+    private boolean testParent(String parentguid, UUID requiredId) {
         if (requiredId == null) return true;
         if (parentguid == null) return false;
         UUID parentId;
@@ -195,7 +199,7 @@ public class FiasReadWorkerBean implements FiasReadService {
             if (entity.isPresent()) {
                 FiasEntity parent = entity.get().getParent();
                 if (parent!=null)
-                    return testRegion(parent.getId().toString(), requiredId);
+                    return testParent(parent.getId().toString(), requiredId);
             }
         }
         return false;

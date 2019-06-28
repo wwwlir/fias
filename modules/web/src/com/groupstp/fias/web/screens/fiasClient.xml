@@ -10,6 +10,13 @@
                 <![CDATA[select e from fias$Region e order by e.name]]>
             </query>
         </collectionDatasource>
+        <collectionDatasource id="citiesDs"
+                              class="com.groupstp.fias.entity.City"
+                              view="_minimal">
+            <query>
+                <![CDATA[select e from fias$City e order by e.name]]>
+            </query>
+        </collectionDatasource>
     </dsContext>
     <dialogMode height="600"
                 width="800"/>
@@ -34,6 +41,9 @@
         <lookupField id="regionField"
                      caption="msg://regionToLoadField"
                      optionsDatasource="regionsDs"/>
+        <lookupField id="cityField"
+                     caption="msg://cityToLoadField"
+                     optionsDatasource="citiesDs"/>
         <buttonsPanel id="buttonPanel">
             <button id="loadDataBtn"
                     caption="msg://loadDataBtn"

@@ -10,8 +10,6 @@ import com.haulmont.cuba.gui.executors.BackgroundTask;
 import com.haulmont.cuba.gui.executors.BackgroundWorker;
 import com.haulmont.cuba.gui.executors.TaskLifeCycle;
 import org.meridor.fias.enums.AddressLevel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.HashMap;
@@ -19,9 +17,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class Fiasclient extends AbstractWindow {
-    private static final Logger log = LoggerFactory.getLogger(Fiasclient.class);
     @Inject
     private FiasReadService fiasReadService;
+    @Inject
+    private BackgroundWorker backgroundWorker;
 
     @Inject
     private CheckBox regionCheckField;
@@ -42,7 +41,7 @@ public class Fiasclient extends AbstractWindow {
     @Inject
     private LookupField regionField;
     @Inject
-    private BackgroundWorker backgroundWorker;
+    private LookupField cityField;
     @Inject
     private ProgressBar progressBar;
 
@@ -58,6 +57,8 @@ public class Fiasclient extends AbstractWindow {
         levelMap.put("needLoadHouses", houseCheckField.getValue());
         if (regionField.getValue() != null)
             levelMap.put("regionId", ((FiasEntity) regionField.getValue()).getId());
+        if (cityField.getValue() != null)
+            levelMap.put("cityId", ((FiasEntity) cityField.getValue()).getId());
 
         BackgroundTask<Integer, Void> task = new BackgroundTask<Integer, Void>(TimeUnit.HOURS.toSeconds(5), this){
             @Override
