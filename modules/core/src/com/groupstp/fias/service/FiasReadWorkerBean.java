@@ -10,6 +10,7 @@ import com.groupstp.fias.entity.enums.FiasEntityStatus;
 import com.haulmont.cuba.core.Persistence;
 import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
+import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
 import org.meridor.fias.FiasClient;
 import org.meridor.fias.Houses;
@@ -249,5 +250,36 @@ public class FiasReadWorkerBean implements FiasReadService {
         entity.setValue("startdate", object.getSTARTDATE().toGregorianCalendar().getTime(), true);
         entity.setValue("enddate", object.getENDDATE().toGregorianCalendar().getTime(), true);
         return entity;
+    }
+
+    @Override
+    public Map<Class, FiasEntity> getAddressComponents(House house) {
+        if (!PersistenceHelper.isLoaded(house, "parent"))
+            house = dataManager.reload(house, "parent");
+
+        final FiasEntity fiasEntity = house.getParent();
+
+        final HashMap<Class, FiasEntity> entityMap = new HashMap<>();
+        findFiasEntityParent(fiasEntity, entityMap);
+
+        return entityMap;
+    }
+
+    @Override
+    public Map<Class, FiasEntity> getAddressComponents(UUID houseId) {
+        final Optional<House> houseOptional = dataManager.load(House.class)
+                .id(houseId)
+                .view("parent")
+                .optional();
+        return houseOptional.map(this::getAddressComponents).orElse(null);
+    }
+
+    private void findFiasEntityParent(FiasEntity fiasEntity, HashMap<Class, FiasEntity> entityMap) {
+        if (!PersistenceHelper.isLoaded(fiasEntity, "parent"))
+            fiasEntity = dataManager.reload(fiasEntity, "parent");
+        entityMap.put(fiasEntity.getClass(), fiasEntity);
+        if (fiasEntity.getParent() != null) {
+            findFiasEntityParent(fiasEntity.getParent(), entityMap);
+        }
     }
 }
