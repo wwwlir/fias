@@ -10,6 +10,7 @@ import com.groupstp.fias.entity.enums.FiasEntityStatus;
 import com.haulmont.cuba.core.Persistence;
 import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
+import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
 import org.meridor.fias.FiasClient;
 import org.meridor.fias.Houses;
@@ -53,28 +54,32 @@ public class FiasReadWorkerBean implements FiasReadService {
         xmlDirectory = Paths.get(path);
         fiasClient= new FiasClient(xmlDirectory);
         UUID regionId = ((UUID) options.getOrDefault("regionId", null));
+        UUID cityId = ((UUID) options.getOrDefault("cityId", null));
 
         if ((boolean) options.getOrDefault(AddressLevel.REGION, true))
             loadObjects(Region.class, AddressObjects.Object::getREGIONCODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.REGION.getAddressLevel()));
         if ((boolean) options.getOrDefault(AddressLevel.AUTONOMY, true))
             loadObjects(Autonomy.class, AddressObjects.Object::getCODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.AREA, true))
             loadObjects(Area.class, AddressObjects.Object::getAREACODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.CITY, true))
             loadObjects(City.class, AddressObjects.Object::getCITYCODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.COMMUNITY, true))
             loadObjects(Community.class, AddressObjects.Object::getCODE
-                    , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel())
+                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault(AddressLevel.LOCATION, true))
             loadObjects(Location.class, AddressObjects.Object::getCODE
-                    , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel())
+                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault(AddressLevel.STREET, true))
             loadObjects(Street.class, AddressObjects.Object::getSTREETCODE,
-                    o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel()) && testRegion(o.getPARENTGUID(), regionId));
+                    o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel())
+                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault("needLoadHouses", true))
             loadHouses();
     }
@@ -175,7 +180,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                 }));
     }
 
-    private boolean testRegion(String parentguid, UUID requiredId) {
+    private boolean testParent(String parentguid, UUID requiredId) {
         if (requiredId == null) return true;
         if (parentguid == null) return false;
         UUID parentId;
@@ -195,7 +200,7 @@ public class FiasReadWorkerBean implements FiasReadService {
             if (entity.isPresent()) {
                 FiasEntity parent = entity.get().getParent();
                 if (parent!=null)
-                    return testRegion(parent.getId().toString(), requiredId);
+                    return testParent(parent.getId().toString(), requiredId);
             }
         }
         return false;
@@ -245,5 +250,36 @@ public class FiasReadWorkerBean implements FiasReadService {
         entity.setValue("startdate", object.getSTARTDATE().toGregorianCalendar().getTime(), true);
         entity.setValue("enddate", object.getENDDATE().toGregorianCalendar().getTime(), true);
         return entity;
+    }
+
+    @Override
+    public Map<Class, FiasEntity> getAddressComponents(House house) {
+        if (!PersistenceHelper.isLoaded(house, "parent"))
+            house = dataManager.reload(house, "parent");
+
+        final FiasEntity fiasEntity = house.getParent();
+
+        final HashMap<Class, FiasEntity> entityMap = new HashMap<>();
+        findFiasEntityParent(fiasEntity, entityMap);
+
+        return entityMap;
+    }
+
+    @Override
+    public Map<Class, FiasEntity> getAddressComponents(UUID houseId) {
+        final Optional<House> houseOptional = dataManager.load(House.class)
+                .id(houseId)
+                .view("parent")
+                .optional();
+        return houseOptional.map(this::getAddressComponents).orElse(null);
+    }
+
+    private void findFiasEntityParent(FiasEntity fiasEntity, HashMap<Class, FiasEntity> entityMap) {
+        if (!PersistenceHelper.isLoaded(fiasEntity, "parent"))
+            fiasEntity = dataManager.reload(fiasEntity, "parent");
+        entityMap.put(fiasEntity.getClass(), fiasEntity);
+        if (fiasEntity.getParent() != null) {
+            findFiasEntityParent(fiasEntity.getParent(), entityMap);
+        }
     }
 }
