@@ -8,7 +8,6 @@ import com.groupstp.fias.entity.*;
 import com.groupstp.fias.entity.enums.FiasEntityOperationStatus;
 import com.groupstp.fias.entity.enums.FiasEntityStatus;
 import com.haulmont.cuba.core.Persistence;
-import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
 import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
@@ -17,7 +16,6 @@ import org.meridor.fias.Houses;
 import org.meridor.fias.enums.AddressLevel;
 import org.meridor.fias.loader.PartialUnmarshaller;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
@@ -31,14 +29,14 @@ import java.util.function.Predicate;
 @Service(FiasReadService.NAME)
 public class FiasReadWorkerBean implements FiasReadService {
 
-    private static final Logger log = LoggerFactory.getLogger(FiasReadService.class);
-
+    @Inject
+    private Logger log;
+    @Inject
+    private Persistence persistence;
     @Inject
     private DataManager dataManager;
     @Inject
-    private Configuration configuration;
-    @Inject
-    private Persistence persistence;
+    private FiasServiceConfig fiasServiceConfig;
 
     private FiasClient fiasClient;
     private Path xmlDirectory;
@@ -50,7 +48,7 @@ public class FiasReadWorkerBean implements FiasReadService {
 
     @Override
     public void readFias(Map<Object, Object> options) throws FileNotFoundException {
-        String path = configuration.getConfig(FiasServiceConfig.class).getPath();
+        String path = fiasServiceConfig.getPath();
         xmlDirectory = Paths.get(path);
         fiasClient= new FiasClient(xmlDirectory);
         UUID regionId = ((UUID) options.getOrDefault("regionId", null));
