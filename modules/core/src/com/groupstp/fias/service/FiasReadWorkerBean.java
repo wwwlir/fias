@@ -95,7 +95,7 @@ public class FiasReadWorkerBean implements FiasReadService {
     }
 
     private void processHouseEntity(Houses.House fiasHouse, House entity) {
-        persistence.runInTransaction(em -> {
+        persistence.runInTransaction("fiasDs", em -> {
             final String aoguid = fiasHouse.getAOGUID();
             if (Strings.isNullOrEmpty(aoguid)) {
                 log.warn("Missing parent ID (AOGUID) for element {} with id: {}",
@@ -172,7 +172,7 @@ public class FiasReadWorkerBean implements FiasReadService {
         List<AddressObjects.Object> objects = fiasClient.load(predicate);
 
         objects.forEach(object ->
-                persistence.runInTransaction(em -> {
+                persistence.runInTransaction("fiasDs", em -> {
                     FiasEntity entity = loadFiasEntity(clazz, object);
                     if(entity==null)
                         return;
@@ -222,7 +222,6 @@ public class FiasReadWorkerBean implements FiasReadService {
                     newEntity.setId(id);
                     return newEntity;
                 });
-        entity = persistence.getEntityManager().merge(entity);
         UUID parentId;
         FiasEntity parent = null;
         if (object.getPARENTGUID() != null) {
@@ -235,6 +234,7 @@ public class FiasReadWorkerBean implements FiasReadService {
         if (parent == null && !isRegionObject)
             return null;
 
+        entity = persistence.getEntityManager("fiasDs").merge(entity);
         entity.setValue("name", object.getOFFNAME(), true);
         entity.setValue("offname", object.getOFFNAME(), true);
         entity.setValue("shortname", object.getSHORTNAME(), true);
