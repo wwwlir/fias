@@ -72,6 +72,7 @@ public class Fiasclient extends AbstractWindow {
             public void done(Void result) {
                 showNotification(getMessage("loadDone"));
                 progressBar.setIndeterminate(false);
+                progressBar.setValue(1f);
                 super.done(result);
             }
 
@@ -79,6 +80,13 @@ public class Fiasclient extends AbstractWindow {
             public void progress(List<Integer> changes) {
                 progressBar.setIndeterminate(false);
                 super.progress(changes);
+            }
+
+            @Override
+            public boolean handleException(Exception ex) {
+                progressBar.setIndeterminate(false);
+                progressBar.setValue(0.5f);
+                return super.handleException(ex);
             }
         };
         progressBar.setIndeterminate(true);
