@@ -7,8 +7,7 @@ import com.groupstp.fias.config.FiasServiceConfig;
 import com.groupstp.fias.entity.*;
 import com.groupstp.fias.entity.enums.FiasEntityOperationStatus;
 import com.groupstp.fias.entity.enums.FiasEntityStatus;
-import com.haulmont.cuba.core.EntityManager;
-import com.haulmont.cuba.core.Persistence;
+import com.haulmont.cuba.core.global.DataManager;
 import com.haulmont.cuba.core.global.Metadata;
 import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
@@ -35,13 +34,12 @@ public class FiasReadWorkerBean implements FiasReadService {
     @Inject
     private Logger log;
     @Inject
-    private Persistence persistence;
-    @Inject
     private FiasServiceConfig fiasServiceConfig;
     @Inject
     private Metadata metadata;
+    @Inject
+    private DataManager dataManager;
 
-    public static final String STORE_NAME = "fiasDs";
     private FiasClient fiasClient;
     private Path xmlDirectory;
 
@@ -112,32 +110,31 @@ public class FiasReadWorkerBean implements FiasReadService {
                     Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
             return;
         }
-        persistence.runInTransaction(STORE_NAME, em -> {
-            final FiasEntity parentEntity = em.find(FiasEntity.class, parentId);
-            if (parentEntity != null){
-                House house = em.merge(entity);
-                house.setValue("parent", parentEntity, true);
-
-                house.setValue("postalcode", fiasHouse.getPOSTALCODE(), true);
-                house.setValue("ifnsfl", fiasHouse.getIFNSFL(), true);
-                house.setValue("terrifnsfl", fiasHouse.getTERRIFNSFL(), true);
-                house.setValue("ifnsul", fiasHouse.getIFNSUL(), true);
-                house.setValue("terrifnsul", fiasHouse.getTERRIFNSUL(), true);
-                house.setValue("okato", fiasHouse.getOKATO(), true);
-                house.setValue("oktmo", fiasHouse.getOKTMO(), true);
-                house.setValue("housenum", fiasHouse.getHOUSENUM(), true);
-                house.setValue("eststatus", fiasHouse.getESTSTATUS().intValue(), true);
-                house.setValue("buildnum", fiasHouse.getBUILDNUM(), true);
-                house.setValue("strstatus", fiasHouse.getSTRSTATUS().intValue(), true);
-                house.setValue("strucnum", fiasHouse.getSTRUCNUM(), true);
-                house.setValue("startdate", fiasHouse.getSTARTDATE().toGregorianCalendar().getTime(), true);
-                house.setValue("enddate", fiasHouse.getENDDATE().toGregorianCalendar().getTime(), true);
-
-            } else {
-                log.warn("Was unable to find parent (id={}) for element {} with id={}"
-                        , fiasHouse.getAOGUID(), Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
-            }
-        });
+        final FiasEntity parentEntity = dataManager.load(FiasEntity.class)
+                .id(parentId)
+                .optional()
+                .orElse(null);
+        if (parentEntity != null){
+            entity.setValue("parent", parentEntity, true);
+            entity.setValue("postalcode", fiasHouse.getPOSTALCODE(), true);
+            entity.setValue("ifnsfl", fiasHouse.getIFNSFL(), true);
+            entity.setValue("terrifnsfl", fiasHouse.getTERRIFNSFL(), true);
+            entity.setValue("ifnsul", fiasHouse.getIFNSUL(), true);
+            entity.setValue("terrifnsul", fiasHouse.getTERRIFNSUL(), true);
+            entity.setValue("okato", fiasHouse.getOKATO(), true);
+            entity.setValue("oktmo", fiasHouse.getOKTMO(), true);
+            entity.setValue("housenum", fiasHouse.getHOUSENUM(), true);
+            entity.setValue("eststatus", fiasHouse.getESTSTATUS().intValue(), true);
+            entity.setValue("buildnum", fiasHouse.getBUILDNUM(), true);
+            entity.setValue("strstatus", fiasHouse.getSTRSTATUS().intValue(), true);
+            entity.setValue("strucnum", fiasHouse.getSTRUCNUM(), true);
+            entity.setValue("startdate", fiasHouse.getSTARTDATE().toGregorianCalendar().getTime(), true);
+            entity.setValue("enddate", fiasHouse.getENDDATE().toGregorianCalendar().getTime(), true);
+            dataManager.commit(entity);
+        } else {
+            log.warn("Was unable to find parent (id={}) for element {} with id={}"
+                    , fiasHouse.getAOGUID(), Houses.House.class.getSimpleName(), fiasHouse.getHOUSEGUID());
+        }
     }
 
     private House getHouseEntity(Houses.House fiasHouse) {
@@ -151,8 +148,11 @@ public class FiasReadWorkerBean implements FiasReadService {
             return null;
         }
 
-        House house = persistence.callInTransaction(STORE_NAME,
-                em -> em.find(House.class, entityId, "parent"));
+        House house = dataManager.load(House.class)
+                .id(entityId)
+                .view("parent")
+                .optional()
+                .orElse(null);
         if (house == null) {
             house = metadata.create(House.class);
             house.setId(entityId);
@@ -169,13 +169,13 @@ public class FiasReadWorkerBean implements FiasReadService {
         log.debug("Loading objects of class {}", clazz.getSimpleName());
         List<AddressObjects.Object> objects = fiasClient.load(predicate);
 
-        objects.forEach(object ->
-                persistence.runInTransaction(STORE_NAME, em -> {
-                    FiasEntity entity = loadFiasEntity(clazz, object, em);
-                    if(entity==null)
-                        return;
-                    entity.setCode(getCodeFunction.apply(object));
-                }));
+        objects.forEach(object -> {
+            FiasEntity entity = loadFiasEntity(clazz, object);
+            if (entity == null)
+                return;
+            entity.setCode(getCodeFunction.apply(object));
+            dataManager.commit(entity);
+        });
     }
 
     private boolean testParent(String parentguid, UUID requiredId) {
@@ -191,9 +191,11 @@ public class FiasReadWorkerBean implements FiasReadService {
         if (parentId.equals(requiredId))
             return true;
         else {
-            final FiasEntity entity = persistence.callInTransaction(STORE_NAME, em ->
-                    em.find(FiasEntity.class, parentId, "parent")
-            );
+            final FiasEntity entity = dataManager.load(FiasEntity.class)
+                    .id(parentId)
+                    .view("parent")
+                    .optional()
+                    .orElse(null);
             if (entity != null) {
                 FiasEntity parent = entity.getParent();
                 if (parent != null)
@@ -203,7 +205,7 @@ public class FiasReadWorkerBean implements FiasReadService {
         return false;
     }
 
-    private <T extends FiasEntity> FiasEntity loadFiasEntity(Class<T> clazz, AddressObjects.Object object, EntityManager em){
+    private <T extends FiasEntity> FiasEntity loadFiasEntity(Class<T> clazz, AddressObjects.Object object){
         boolean isRegionObject = AddressLevel.REGION.getAddressLevel().equals(object.getAOLEVEL());
         if (object.getPARENTGUID() == null && !isRegionObject) {
             log.warn("Missing parent ID (PARENTGUID) for element id={}, name={}", object.getAOGUID(), object.getOFFNAME());
@@ -211,22 +213,29 @@ public class FiasReadWorkerBean implements FiasReadService {
         }
         UUID id = UUID.fromString(object.getAOGUID());
 
-        FiasEntity entity = em.find(FiasEntity.class, id, "parent");
-        if (entity == null) {
-            entity = metadata.create(clazz);
-            entity.setId(id);
-        }
+        FiasEntity entity = dataManager.load(FiasEntity.class)
+                .id(id)
+                .view("parent")
+                .optional()
+                .orElseGet(() -> {
+                    final T entityNew = dataManager.create(clazz);
+                    entityNew.setId(id);
+                    return entityNew;
+                });
+
 
         UUID parentId;
         FiasEntity parent = null;
         if (object.getPARENTGUID() != null) {
             parentId = UUID.fromString(object.getPARENTGUID());
-            parent = em.find(FiasEntity.class, parentId);
+            parent = dataManager.load(FiasEntity.class)
+                    .id(parentId)
+                    .optional()
+                    .orElse(null);
         }
         if (parent == null && !isRegionObject)
             return null;
 
-        entity = em.merge(entity);
         entity.setValue("name", object.getOFFNAME(), true);
         entity.setValue("offname", object.getOFFNAME(), true);
         entity.setValue("shortname", object.getSHORTNAME(), true);
@@ -248,8 +257,7 @@ public class FiasReadWorkerBean implements FiasReadService {
     public Map<Class, FiasEntity> getAddressComponents(House house) {
         final FiasEntity fiasEntity;
         if (!PersistenceHelper.isLoaded(house, "parent")) {
-            House houseReloaded = persistence.callInTransaction(STORE_NAME,
-                    em -> em.reloadNN(house, "parent"));
+            House houseReloaded = dataManager.reload(house, "parent");
             fiasEntity = houseReloaded.getParent();
         } else {
             fiasEntity = house.getParent();
@@ -262,15 +270,17 @@ public class FiasReadWorkerBean implements FiasReadService {
 
     @Override
     public Map<Class, FiasEntity> getAddressComponents(UUID houseId) {
-        final House house = persistence.callInTransaction(STORE_NAME,
-                em -> em.find(House.class, houseId, "parent"));
+        final House house = dataManager.load(House.class)
+                .id(houseId)
+                .view("parent")
+                .optional()
+                .orElse(null);
         return house == null ? null : getAddressComponents(house);
     }
 
     private void findFiasEntityParent(final FiasEntity fiasEntity, HashMap<Class, FiasEntity> entityMap) {
         if (!PersistenceHelper.isLoaded(fiasEntity, "parent")) {
-            final FiasEntity fiasEntityReloaded = persistence.callInTransaction(STORE_NAME,
-                    em -> em.reloadNN(fiasEntity, "parent"));
+            final FiasEntity fiasEntityReloaded = dataManager.reload(fiasEntity, "parent");
             entityMap.put(fiasEntity.getClass(), fiasEntityReloaded);
         } else {
             entityMap.put(fiasEntity.getClass(), fiasEntity);
