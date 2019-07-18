@@ -279,14 +279,13 @@ public class FiasReadWorkerBean implements FiasReadService {
     }
 
     private void findFiasEntityParent(final FiasEntity fiasEntity, HashMap<Class, FiasEntity> entityMap) {
+        FiasEntity feWithParent = fiasEntity;
         if (!PersistenceHelper.isLoaded(fiasEntity, "parent")) {
-            final FiasEntity fiasEntityReloaded = dataManager.reload(fiasEntity, "parent");
-            entityMap.put(fiasEntity.getClass(), fiasEntityReloaded);
-        } else {
-            entityMap.put(fiasEntity.getClass(), fiasEntity);
+            feWithParent  = dataManager.reload(fiasEntity, "parent");
         }
-        if (fiasEntity.getParent() != null) {
-            findFiasEntityParent(fiasEntity.getParent(), entityMap);
+        entityMap.put(fiasEntity.getClass(), feWithParent);
+        if (feWithParent.getParent() != null) {
+            findFiasEntityParent(feWithParent.getParent(), entityMap);
         }
     }
 }
