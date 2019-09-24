@@ -40,7 +40,8 @@ public class FiasReadWorkerBean implements FiasReadService {
     @Inject
     private Persistence persistence;
 
-    private FiasClient fiasClient;
+    //private FiasClient fiasClient;
+    private FiasClientFork fiasClient;
     private Path xmlDirectory;
 
     @Override
@@ -52,7 +53,8 @@ public class FiasReadWorkerBean implements FiasReadService {
     public void readFias(Map<Object, Object> options) throws FileNotFoundException {
         String path = configuration.getConfig(FiasServiceConfig.class).getPath();
         xmlDirectory = Paths.get(path);
-        fiasClient= new FiasClient(xmlDirectory);
+        //fiasClient= new FiasClient(xmlDirectory);
+        fiasClient = new FiasClientFork(xmlDirectory);
         UUID regionId = ((UUID) options.getOrDefault("regionId", null));
         UUID cityId = ((UUID) options.getOrDefault("cityId", null));
 
@@ -115,7 +117,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                     .id(parentId)
                     .optional()
                     .orElse(null);
-            if (parentEntity != null){
+            if (parentEntity != null) {
                 House house = em.merge(entity);
                 house.setValue("parent", parentEntity, true);
 
@@ -146,7 +148,7 @@ public class FiasReadWorkerBean implements FiasReadService {
         final String houseguid = fiasHouse.getHOUSEGUID();
         try {
             entityId = UUID.fromString(houseguid);
-        } catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             log.warn("Wrong entity ID format (HOUSEGUID) for element {} with id: {}",
                     Houses.House.class.getSimpleName(), houseguid);
             return null;
@@ -166,18 +168,19 @@ public class FiasReadWorkerBean implements FiasReadService {
 
     private void loadObjects(Class<? extends FiasEntity> clazz
             , Function<AddressObjects.Object, String> getCodeFunction
-            , Predicate<AddressObjects.Object> predicate)
-    {
+            , Predicate<AddressObjects.Object> predicate) {
         log.debug("Loading objects of class {}", clazz.getSimpleName());
         List<AddressObjects.Object> objects = fiasClient.load(predicate);
 
         objects.forEach(object ->
                 persistence.runInTransaction(em -> {
                     FiasEntity entity = loadFiasEntity(clazz, object);
-                    if(entity==null)
+                    if (entity == null)
                         return;
                     entity.setCode(getCodeFunction.apply(object));
+                    log.debug("New Entity {} was loaded {}", objects.indexOf(object), entity.getUuid());
                 }));
+        log.debug("{} entities were loaded (class = {})", objects.size(), clazz.getSimpleName());
     }
 
     private boolean testParent(String parentguid, UUID requiredId) {
@@ -199,14 +202,14 @@ public class FiasReadWorkerBean implements FiasReadService {
                     .optional();
             if (entity.isPresent()) {
                 FiasEntity parent = entity.get().getParent();
-                if (parent!=null)
+                if (parent != null)
                     return testParent(parent.getId().toString(), requiredId);
             }
         }
         return false;
     }
 
-    private <T extends FiasEntity> FiasEntity loadFiasEntity(Class<T> clazz, AddressObjects.Object object){
+    private <T extends FiasEntity> FiasEntity loadFiasEntity(Class<T> clazz, AddressObjects.Object object) {
         boolean isRegionObject = AddressLevel.REGION.getAddressLevel().equals(object.getAOLEVEL());
         if (object.getPARENTGUID() == null && !isRegionObject) {
             log.warn("Missing parent ID (PARENTGUID) for element id={}, name={}", object.getAOGUID(), object.getOFFNAME());

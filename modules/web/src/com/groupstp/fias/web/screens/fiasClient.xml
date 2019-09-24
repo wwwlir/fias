@@ -38,18 +38,23 @@
                   caption="msg://streetCheckField"/>
         <checkBox id="houseCheckField"
                   caption="msg://houseCheckField"/>
-        <lookupField id="regionField" width="400px"
+        <lookupField id="regionField"
                      caption="msg://regionToLoadField"
-                     optionsDatasource="regionsDs"/>
-        <lookupField id="cityField" width="400px"
+                     optionsDatasource="regionsDs"
+                     width="400px"/>
+        <lookupField id="cityField"
                      caption="msg://cityToLoadField"
-                     optionsDatasource="citiesDs"/>
+                     optionsDatasource="citiesDs"
+                     width="400px"/>
         <buttonsPanel id="buttonPanel">
             <button id="loadDataBtn"
                     caption="msg://loadDataBtn"
                     invoke="onBtnClick"/>
+            <button id="pauseLoadingDataBtn"
+                    caption="Отмена"
+                    invoke="onPauseLoadingDataBtnClick"/>
             <progressBar id="progressBar"
-                         indeterminate="false" width="335px"/>
+                         width="335px"/>
         </buttonsPanel>
     </layout>
 </window>

@@ -7,6 +7,7 @@ import com.haulmont.cuba.gui.components.CheckBox;
 import com.haulmont.cuba.gui.components.LookupField;
 import com.haulmont.cuba.gui.components.ProgressBar;
 import com.haulmont.cuba.gui.executors.BackgroundTask;
+import com.haulmont.cuba.gui.executors.BackgroundTaskHandler;
 import com.haulmont.cuba.gui.executors.BackgroundWorker;
 import com.haulmont.cuba.gui.executors.TaskLifeCycle;
 import org.meridor.fias.enums.AddressLevel;
@@ -14,6 +15,7 @@ import org.meridor.fias.enums.AddressLevel;
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class Fiasclient extends AbstractWindow {
@@ -45,6 +47,8 @@ public class Fiasclient extends AbstractWindow {
     @Inject
     private ProgressBar progressBar;
 
+    private BackgroundTaskHandler taskHandler;
+
     public void onBtnClick() {
         HashMap<Object, Object> levelMap = new HashMap<>();
         levelMap.put(AddressLevel.REGION, regionCheckField.getValue());
@@ -59,8 +63,13 @@ public class Fiasclient extends AbstractWindow {
             levelMap.put("regionId", ((FiasEntity) regionField.getValue()).getId());
         if (cityField.getValue() != null)
             levelMap.put("cityId", ((FiasEntity) cityField.getValue()).getId());
+        progressBar.setIndeterminate(true);
+        taskHandler = backgroundWorker.handle(createBackgroundTask(levelMap));
+        taskHandler.execute();
+    }
 
-        BackgroundTask<Integer, Void> task = new BackgroundTask<Integer, Void>(TimeUnit.HOURS.toSeconds(5), this){
+    private BackgroundTask<Integer, Void> createBackgroundTask(HashMap<Object, Object> levelMap) {
+        return new BackgroundTask<Integer, Void>(TimeUnit.HOURS.toSeconds(5), this) {
             @Override
             public Void run(TaskLifeCycle<Integer> taskLifeCycle) throws Exception {
                 fiasReadService.readFias(levelMap);
@@ -80,8 +89,17 @@ public class Fiasclient extends AbstractWindow {
                 progressBar.setIndeterminate(false);
                 super.progress(changes);
             }
+
+            @Override
+            public void canceled() {
+                progressBar.setIndeterminate(false);
+                showNotification("Задача была отменена");
+            }
         };
-        progressBar.setIndeterminate(true);
-        backgroundWorker.handle(task).execute();
+    }
+
+    public void onPauseLoadingDataBtnClick() {
+        //if (backgroundWorker.handle(task).isAlive())
+        taskHandler.cancel();
     }
 }
