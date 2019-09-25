@@ -1,4 +1,4 @@
-package com.groupstp.fias.client;
+package com.groupstp.fias.client.old;
 
 import com.groupstp.fias.service.FiasReadService;
 import org.meridor.fias.AddressObjects;
@@ -6,14 +6,11 @@ import org.meridor.fias.loader.PartialUnmarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.stream.XMLStreamReader;
+import javax.annotation.Nullable;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
@@ -49,6 +46,7 @@ public class XMLLoader {
         }
     }
 
+    @Deprecated
     public List<AddressObjects.Object> loadRaw(Predicate<AddressObjects.Object> predicate) {
         if (predicate == null) {
             return Collections.emptyList();
@@ -75,5 +73,40 @@ public class XMLLoader {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @Nullable
+    public AddressObjectFork loadObject(Predicate<AddressObjects.Object> predicate, Path filePath, long offset) {
+        try {
+            ProgressCounterFilterInputStream inputStream = new ProgressCounterFilterInputStream(new BufferedInputStream(new FileInputStream(filePath.toFile())));
+            try (PartialUnmarshallerFork<AddressObjects.Object> partialUnmarshaller = new PartialUnmarshallerFork<>(inputStream, AddressObjects.Object.class, offset)) {
+                while (partialUnmarshaller.hasNext()) {
+                    AddressObjects.Object addressObject = partialUnmarshaller.next();
+                    if (predicate.test(addressObject)) {
+                        return new AddressObjectFork(addressObject, partialUnmarshaller.getInputStream().getProgress());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        return null;
+    }
+
+    @Nullable
+    public AddressObjectFork loadObject(Predicate<AddressObjects.Object> predicate, ProgressCounterFilterInputStream inputStream, long offset) {
+        try {
+            try (PartialUnmarshallerFork<AddressObjects.Object> partialUnmarshaller = new PartialUnmarshallerFork<>(inputStream, AddressObjects.Object.class, offset)) {
+                while (partialUnmarshaller.hasNext()) {
+                    AddressObjects.Object addressObject = partialUnmarshaller.next();
+                    if (predicate.test(addressObject)) {
+                        return new AddressObjectFork(addressObject, partialUnmarshaller.getInputStream().getProgress());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        return null;
     }
 }

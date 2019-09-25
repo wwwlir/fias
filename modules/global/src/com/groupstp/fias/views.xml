@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <views xmlns="http://schemas.haulmont.com/cuba/view.xsd">
     <view class="com.groupstp.fias.entity.FiasEntity"
-          extends="_minimal"
+          extends="_local"
           name="parent">
         <property name="parent"
                   view="_minimal"/>

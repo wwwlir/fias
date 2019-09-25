@@ -2,6 +2,8 @@
 <screen-config xmlns="http://schemas.haulmont.com/cuba/screens.xsd">
     <screen id="fiasClient"
             template="com/groupstp/fias/web/screens/fiasClient.xml"/>
+    <screen id="fiasClientv2"
+            template="com/groupstp/fias/web/screens/fiasClientv2.xml"/>
     <screen id="fias$FiasEntity.browse"
             template="com/groupstp/fias/web/fiasentity/fias-entity-browse.xml"/>
     <screen id="fias$House.browse"

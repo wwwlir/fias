@@ -2,7 +2,9 @@ package com.groupstp.fias.service;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
-import com.groupstp.fias.client.FiasClientFork;
+import com.groupstp.fias.client.old.AddressObjectFork;
+import com.groupstp.fias.client.old.FiasClientFork;
+import com.groupstp.fias.client.old.ProgressCounterFilterInputStream;
 import com.groupstp.fias.config.FiasServiceConfig;
 import com.groupstp.fias.entity.*;
 import com.groupstp.fias.entity.enums.FiasEntityOperationStatus;
@@ -12,7 +14,6 @@ import com.haulmont.cuba.core.global.Configuration;
 import com.haulmont.cuba.core.global.DataManager;
 import com.haulmont.cuba.core.global.PersistenceHelper;
 import org.meridor.fias.AddressObjects;
-import org.meridor.fias.FiasClient;
 import org.meridor.fias.Houses;
 import org.meridor.fias.enums.AddressLevel;
 import org.meridor.fias.loader.PartialUnmarshaller;
@@ -21,12 +22,18 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.inject.Inject;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
 
 @Service(FiasReadService.NAME)
 public class FiasReadWorkerBean implements FiasReadService {
@@ -44,13 +51,16 @@ public class FiasReadWorkerBean implements FiasReadService {
     private FiasClientFork fiasClient;
     private Path xmlDirectory;
 
+    //переменная для хранения прогресса
+    private long progress = 0;
+
     @Override
-    public void readFias() throws FileNotFoundException {
+    public void readFias() throws IOException {
         readFias(new HashMap<>());
     }
 
     @Override
-    public void readFias(Map<Object, Object> options) throws FileNotFoundException {
+    public void readFias(Map<Object, Object> options) throws IOException {
         String path = configuration.getConfig(FiasServiceConfig.class).getPath();
         xmlDirectory = Paths.get(path);
         //fiasClient= new FiasClient(xmlDirectory);
@@ -58,28 +68,54 @@ public class FiasReadWorkerBean implements FiasReadService {
         UUID regionId = ((UUID) options.getOrDefault("regionId", null));
         UUID cityId = ((UUID) options.getOrDefault("cityId", null));
 
+//        if ((boolean) options.getOrDefault(AddressLevel.REGION, true))
+//            loadObjects(Region.class, AddressObjects.Object::getREGIONCODE,
+//                    o -> o.getAOLEVEL().equals(AddressLevel.REGION.getAddressLevel()));
+//        if ((boolean) options.getOrDefault(AddressLevel.AUTONOMY, true))
+//            loadObjects(Autonomy.class, AddressObjects.Object::getCODE,
+//                    o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
+//        if ((boolean) options.getOrDefault(AddressLevel.AREA, true))
+//            loadObjects(Area.class, AddressObjects.Object::getAREACODE,
+//                    o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
+//        if ((boolean) options.getOrDefault(AddressLevel.CITY, true))
+//            loadObjects(City.class, AddressObjects.Object::getCITYCODE,
+//                    o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
+//        if ((boolean) options.getOrDefault(AddressLevel.COMMUNITY, true))
+//            loadObjects(Community.class, AddressObjects.Object::getCODE
+//                    , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel())
+//                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
+//        if ((boolean) options.getOrDefault(AddressLevel.LOCATION, true))
+//            loadObjects(Location.class, AddressObjects.Object::getCODE
+//                    , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel())
+//                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
+//        if ((boolean) options.getOrDefault(AddressLevel.STREET, true))
+//            loadObjects(Street.class, AddressObjects.Object::getSTREETCODE,
+//                    o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel())
+//                            && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
+//        if ((boolean) options.getOrDefault("needLoadHouses", true))
+//            loadHouses();
         if ((boolean) options.getOrDefault(AddressLevel.REGION, true))
-            loadObjects(Region.class, AddressObjects.Object::getREGIONCODE,
+            createObjects(Region.class, AddressObjects.Object::getREGIONCODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.REGION.getAddressLevel()));
         if ((boolean) options.getOrDefault(AddressLevel.AUTONOMY, true))
-            loadObjects(Autonomy.class, AddressObjects.Object::getCODE,
+            createObjects(Autonomy.class, AddressObjects.Object::getCODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.AREA, true))
-            loadObjects(Area.class, AddressObjects.Object::getAREACODE,
+            createObjects(Area.class, AddressObjects.Object::getAREACODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.CITY, true))
-            loadObjects(City.class, AddressObjects.Object::getCITYCODE,
+            createObjects(City.class, AddressObjects.Object::getCITYCODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId));
         if ((boolean) options.getOrDefault(AddressLevel.COMMUNITY, true))
-            loadObjects(Community.class, AddressObjects.Object::getCODE
+            createObjects(Community.class, AddressObjects.Object::getCODE
                     , o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel())
                             && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault(AddressLevel.LOCATION, true))
-            loadObjects(Location.class, AddressObjects.Object::getCODE
+            createObjects(Location.class, AddressObjects.Object::getCODE
                     , o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel())
                             && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault(AddressLevel.STREET, true))
-            loadObjects(Street.class, AddressObjects.Object::getSTREETCODE,
+            createObjects(Street.class, AddressObjects.Object::getSTREETCODE,
                     o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel())
                             && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId)));
         if ((boolean) options.getOrDefault("needLoadHouses", true))
@@ -165,7 +201,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                 });
     }
 
-
+    @Deprecated
     private void loadObjects(Class<? extends FiasEntity> clazz
             , Function<AddressObjects.Object, String> getCodeFunction
             , Predicate<AddressObjects.Object> predicate) {
@@ -181,6 +217,56 @@ public class FiasReadWorkerBean implements FiasReadService {
                     log.debug("New Entity {} was loaded {}", objects.indexOf(object), entity.getUuid());
                 }));
         log.debug("{} entities were loaded (class = {})", objects.size(), clazz.getSimpleName());
+    }
+
+    private void createObjects(Class<? extends FiasEntity> clazz
+            , Function<AddressObjects.Object, String> getCodeFunction
+            , Predicate<AddressObjects.Object> predicate) throws IOException {
+        switch (clazz.getSimpleName()) {
+            case "Area":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressArea();
+                break;
+            case "Autonomy":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressAutonomies();
+                break;
+            case "City":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressCity();
+                break;
+            case "Community":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressCommunity();
+                break;
+            case "House":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressHouses();
+                break;
+            case "Location":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressLocation();
+                break;
+            case "Region":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressRegions();
+                break;
+            case "Street":
+                progress = configuration.getConfig(FiasServiceConfig.class).getProgressStreet();
+                break;
+            default:
+                progress = 0;
+                break;
+        }
+
+        log.debug("Creating objects of class {}", clazz.getSimpleName());
+        Path filePath = getPathByPattern(ADDRESS_OBJECTS.getName());
+        ProgressCounterFilterInputStream inputStream = new ProgressCounterFilterInputStream(new BufferedInputStream(new FileInputStream(filePath.toFile())));
+        while (progress <= Files.size(filePath)) {
+            AddressObjectFork addressObjectFork = fiasClient.load(predicate, filePath, progress);
+            //AddressObjectFork addressObjectFork = fiasClient.load(predicate, inputStream, progress);
+
+            FiasEntity fe = loadFiasEntity(clazz, addressObjectFork.getObject());
+            dataManager.commit(fe);
+            log.debug("New Entity {} was created (class = {}), reached {}% of file",
+                    fe.getUuid(),
+                    clazz.getSimpleName(),
+                    (int) (Math.abs((double) addressObjectFork.getOffset() / (double) Files.size(filePath) * 100)));
+            progress = addressObjectFork.getOffset();
+        }
     }
 
     private boolean testParent(String parentguid, UUID requiredId) {
@@ -225,7 +311,7 @@ public class FiasReadWorkerBean implements FiasReadService {
                     newEntity.setId(id);
                     return newEntity;
                 });
-        entity = persistence.getEntityManager().merge(entity);
+        //entity = persistence.getEntityManager().merge(entity);
         UUID parentId;
         FiasEntity parent = null;
         if (object.getPARENTGUID() != null) {
@@ -284,5 +370,16 @@ public class FiasReadWorkerBean implements FiasReadService {
         if (fiasEntity.getParent() != null) {
             findFiasEntityParent(fiasEntity.getParent(), entityMap);
         }
+    }
+
+    private Path getPathByPattern(String startsWith) throws IOException {
+        Optional<Path> filePath = Files.list(xmlDirectory)
+                .map(xmlDirectory::relativize)
+                .filter(path -> path.toString().startsWith(startsWith) && path.toString().toLowerCase().endsWith("xml"))
+                .findFirst();
+        if (!filePath.isPresent()) {
+            throw new FileNotFoundException(String.format("Can't find XML file with name starting with [%s]", startsWith));
+        }
+        return xmlDirectory.resolve(filePath.get());
     }
 }

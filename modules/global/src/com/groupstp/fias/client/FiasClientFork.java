@@ -29,7 +29,20 @@ public class FiasClientFork {
         return fias_XMLLoader.getUnmarshaller(clazz);
     }
 
+    @Deprecated
     public List<AddressObjects.Object> load(Predicate<AddressObjects.Object> predicate) {
         return fias_XMLLoader.loadRaw(predicate);
+    }
+
+    public AddressObjectFork load(Predicate<AddressObjects.Object> predicate, Path filePath, long offset) {
+        return fias_XMLLoader.loadObject(predicate, filePath, offset);
+    }
+
+    public AddressObjectFork load(Predicate<AddressObjects.Object> predicate, ProgressCounterFilterInputStream inputStream, long offset) {
+        return fias_XMLLoader.loadObject(predicate, inputStream, offset);
+    }
+
+    public List<AddressObjectFork> loadList(Predicate<AddressObjects.Object> predicate, Path filePath, long offset, int batchSize) throws FileNotFoundException {
+        return fias_XMLLoader.loadObjects(predicate, filePath, offset, batchSize);
     }
 }

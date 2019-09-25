@@ -1,4 +1,4 @@
-package com.groupstp.fias.client;
+package com.groupstp.fias.client.old;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
@@ -7,7 +7,6 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -20,7 +19,9 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
     private final Class<T> destinationClass;
     private final Unmarshaller unmarshaller;
     private final ProgressCounterFilterInputStream inputStream;
+    private long offset;
 
+    @Deprecated
     public PartialUnmarshallerFork(ProgressCounterFilterInputStream inputStream, Class<T> destinationClass) throws Exception {
         this.inputStream = inputStream;
         this.destinationClass = destinationClass;
@@ -35,8 +36,21 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
         skipElements(END_ELEMENT);
     }
 
-    public XMLStreamReader getReader() {
-        return reader;
+    public PartialUnmarshallerFork(ProgressCounterFilterInputStream inputStream, Class<T> destinationClass, long offset) throws Exception {
+        this.inputStream = inputStream;
+        this.destinationClass = destinationClass;
+        this.unmarshaller = JAXBContext.newInstance(destinationClass).createUnmarshaller();
+        this.reader = XMLInputFactory.newInstance().createXMLStreamReader(inputStream);
+        this.offset = offset;
+
+        // ignore headers
+        skipElements(START_DOCUMENT, DTD);
+        // ignore root element
+        reader.nextTag();
+        // if there's no tag, ignore root element's end
+        skipElements(END_ELEMENT);
+        //skip beginning of the document (if it was read earlier)
+        skipBeginning(offset);
     }
 
     public ProgressCounterFilterInputStream getInputStream() {
@@ -79,5 +93,10 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
         List<Integer> types = Arrays.asList(elements);
         while (types.contains(eventType))
             eventType = reader.next();
+    }
+
+    private void skipBeginning(long offset) throws Exception {
+        while (this.inputStream.getProgress() <= offset)
+            reader.next();
     }
 }

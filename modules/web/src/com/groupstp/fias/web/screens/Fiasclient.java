@@ -11,14 +11,24 @@ import com.haulmont.cuba.gui.executors.BackgroundTaskHandler;
 import com.haulmont.cuba.gui.executors.BackgroundWorker;
 import com.haulmont.cuba.gui.executors.TaskLifeCycle;
 import org.meridor.fias.enums.AddressLevel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
+
 public class Fiasclient extends AbstractWindow {
+    private static final Logger log = LoggerFactory.getLogger(FiasReadService.class);
+
     @Inject
     private FiasReadService fiasReadService;
     @Inject

@@ -4,6 +4,6 @@
           insertBefore="sec$Role.browse">
         <item screen="fias$FiasEntity.browse"/>
         <item screen="fias$House.browse"/>
-        <item screen="fiasClient"/>
+        <item screen="fiasClientv2"/>
     </menu>
 </menu-config>

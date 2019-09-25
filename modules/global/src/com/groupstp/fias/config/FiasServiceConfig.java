@@ -6,6 +6,7 @@ import com.haulmont.cuba.core.config.Source;
 import com.haulmont.cuba.core.config.SourceType;
 import com.haulmont.cuba.core.config.defaults.Default;
 import com.haulmont.cuba.core.config.defaults.DefaultInt;
+import com.haulmont.cuba.core.config.defaults.DefaultInteger;
 import com.haulmont.cuba.core.config.defaults.DefaultLong;
 
 @Source(type = SourceType.DATABASE)
@@ -14,6 +15,10 @@ public interface FiasServiceConfig extends Config {
     @Property("fias.fias-service.path")
     @Default("D:/Work/Files/fias/fias_xml")
     String getPath();
+
+    @Property("fias.fias-service.batchSize")
+    @DefaultInt(1000)
+    int getBatchSize();
 
     @Property("fias.fias-service.import-process.progressRegions")
     @DefaultLong(0)
