@@ -1,7 +1,6 @@
 package com.groupstp.fias.web.screens;
 
 import com.groupstp.fias.entity.FiasEntity;
-import com.groupstp.fias.service.FiasReadService;
 import com.haulmont.cuba.gui.components.AbstractWindow;
 import com.haulmont.cuba.gui.components.CheckBox;
 import com.haulmont.cuba.gui.components.LookupField;
@@ -27,10 +26,8 @@ import java.util.concurrent.TimeUnit;
 import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
 
 public class Fiasclient extends AbstractWindow {
-    private static final Logger log = LoggerFactory.getLogger(FiasReadService.class);
+    private static final Logger log = LoggerFactory.getLogger("output");
 
-    @Inject
-    private FiasReadService fiasReadService;
     @Inject
     private BackgroundWorker backgroundWorker;
 
@@ -82,7 +79,7 @@ public class Fiasclient extends AbstractWindow {
         return new BackgroundTask<Integer, Void>(TimeUnit.HOURS.toSeconds(5), this) {
             @Override
             public Void run(TaskLifeCycle<Integer> taskLifeCycle) throws Exception {
-                fiasReadService.readFias(levelMap);
+                //fiasReadService.readFias(levelMap);
                 taskLifeCycle.publish(1);
                 return null;
             }

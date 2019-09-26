@@ -11,8 +11,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class FiasClientFork {
-    //private final XMLLoader xmlLoader;
-    private final XMLLoader fias_XMLLoader;
+    private final XMLLoaderFork xmlLoaderFork;
 
     public FiasClientFork(Path xmlDirectory) throws FileNotFoundException {
         if (!Files.exists(xmlDirectory)) {
@@ -21,28 +20,31 @@ public class FiasClientFork {
                     xmlDirectory
             ));
         }
-        //xmlLoader = new XMLLoader(xmlDirectory);
-        fias_XMLLoader = new XMLLoader(xmlDirectory);
+        xmlLoaderFork = new XMLLoaderFork(xmlDirectory);
     }
 
     public <T> PartialUnmarshaller<T> getUnmarshaller(Class<T> clazz) {
-        return fias_XMLLoader.getUnmarshaller(clazz);
+        return xmlLoaderFork.getUnmarshaller(clazz);
+    }
+
+    public <T> PartialUnmarshallerFork<T> getUnmarshallerFork(Class<T> clazz, long offset) {
+        return xmlLoaderFork.getUnmarshallerFork(clazz, offset);
     }
 
     @Deprecated
     public List<AddressObjects.Object> load(Predicate<AddressObjects.Object> predicate) {
-        return fias_XMLLoader.loadRaw(predicate);
+        return xmlLoaderFork.loadRaw(predicate);
     }
 
     public AddressObjectFork load(Predicate<AddressObjects.Object> predicate, Path filePath, long offset) {
-        return fias_XMLLoader.loadObject(predicate, filePath, offset);
+        return xmlLoaderFork.loadObject(predicate, filePath, offset);
     }
 
     public AddressObjectFork load(Predicate<AddressObjects.Object> predicate, ProgressCounterFilterInputStream inputStream, long offset) {
-        return fias_XMLLoader.loadObject(predicate, inputStream, offset);
+        return xmlLoaderFork.loadObject(predicate, inputStream, offset);
     }
 
     public List<AddressObjectFork> loadList(Predicate<AddressObjects.Object> predicate, Path filePath, long offset, int batchSize) throws FileNotFoundException {
-        return fias_XMLLoader.loadObjects(predicate, filePath, offset, batchSize);
+        return xmlLoaderFork.loadObjects(predicate, filePath, offset, batchSize);
     }
 }

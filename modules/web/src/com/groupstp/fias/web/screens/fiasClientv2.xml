@@ -20,7 +20,7 @@
     </dsContext>
     <dialogMode height="600"
                 width="800"/>
-    <layout expand="buttonPanel"
+    <layout expand="fakeLabel"
             spacing="true">
         <checkBox id="regionCheckField"
                   caption="msg://regionCheckField"/>
@@ -46,15 +46,29 @@
                      caption="msg://cityToLoadField"
                      optionsDatasource="citiesDs"
                      width="400px"/>
-        <buttonsPanel id="buttonPanel">
-            <button id="loadDataBtn"
-                    caption="msg://loadDataBtn"
-                    invoke="onBtnClick"/>
-            <button id="pauseLoadingDataBtn"
-                    caption="Отмена"
-                    invoke="onPauseLoadingDataBtnClick"/>
-            <progressBar id="progressBar"
-                         width="335px"/>
-        </buttonsPanel>
+        <vbox id="vbox"
+              spacing="true"
+              width="AUTO">
+            <buttonsPanel id="buttonPanel">
+                <button id="loadDataBtn"
+                        caption="msg://loadDataBtn"
+                        invoke="onBtnClick"/>
+                <button id="pauseLoadingDataBtn"
+                        caption="msg://pauseLoadingDataBtn"
+                        invoke="onPauseLoadingDataBtnClick"/>
+                <button id="resetProgressButton"
+                        caption="msg://resetProgressButton"
+                        invoke="onResetProgressButtonClick"/>
+            </buttonsPanel>
+            <hbox spacing="true">
+                <progressBar id="progressBar"
+                             width="335px"/>
+                <label id="progressLabel"
+                       align="MIDDLE_CENTER"
+                       height="50px"
+                       width="50px"/>
+            </hbox>
+        </vbox>
+        <label id="fakeLabel"/>
     </layout>
 </window>
