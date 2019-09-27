@@ -21,7 +21,6 @@ import com.haulmont.cuba.gui.executors.TaskLifeCycle;
 import org.meridor.fias.AddressObjects;
 import org.meridor.fias.Houses;
 import org.meridor.fias.enums.AddressLevel;
-import org.meridor.fias.loader.PartialUnmarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +30,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -40,7 +40,7 @@ import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
 import static org.meridor.fias.enums.FiasFile.HOUSE;
 
 public class Fiasclientv2 extends AbstractWindow {
-    private static final Logger log = LoggerFactory.getLogger("outPut");
+    private static final Logger log = LoggerFactory.getLogger("FiasClient");
     @Inject
     private BackgroundWorker backgroundWorker;
 
@@ -68,6 +68,12 @@ public class Fiasclientv2 extends AbstractWindow {
     private ProgressBar progressBar;
     @Inject
     private Label progressLabel;
+    @Inject
+    private Button loadDataBtn;
+    @Inject
+    private Button pauseLoadingDataBtn;
+    @Inject
+    private Button resetProgressButton;
 
     private BackgroundTaskHandler taskHandler;
 
@@ -80,6 +86,14 @@ public class Fiasclientv2 extends AbstractWindow {
     private Path xmlDirectory;
 
     private long progress;
+
+    private boolean taskWasStarted = false;
+    private Class lastClassWorked;
+
+    @Override
+    public void init(Map<String, Object> params) {
+        setupCloseWindowListeners();
+    }
 
     public void onBtnClick() {
         HashMap<Object, Object> options = new HashMap<>();
@@ -98,6 +112,7 @@ public class Fiasclientv2 extends AbstractWindow {
 
         taskHandler = backgroundWorker.handle(createBackgroundTask(options));
         taskHandler.execute();
+        setupControlButtons(false);
     }
 
     private BackgroundTask<Integer, Void> createBackgroundTask(Map<Object, Object> options) {
@@ -111,6 +126,7 @@ public class Fiasclientv2 extends AbstractWindow {
 
             @Override
             public Void run(TaskLifeCycle<Integer> taskLifeCycle) throws Exception {
+                taskWasStarted = true;
                 String path = configuration.getConfig(FiasServiceConfig.class).getPath();
                 int batchSize = configuration.getConfig(FiasServiceConfig.class).getBatchSize();
                 UUID regionId = ((UUID) options.getOrDefault("regionId", null));
@@ -122,21 +138,25 @@ public class Fiasclientv2 extends AbstractWindow {
                 //грузим Regions
                 if ((boolean) options.getOrDefault(AddressLevel.REGION, true)) {
                     clazz = Region.class;
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    lastClassWorked = clazz;
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     getCodeFunction = AddressObjects.Object::getREGIONCODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.REGION.getAddressLevel());
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -148,34 +168,38 @@ public class Fiasclientv2 extends AbstractWindow {
                                     taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Autonomies
                 if ((boolean) options.getOrDefault(AddressLevel.AUTONOMY, true)) {
                     clazz = Autonomy.class;
+                    lastClassWorked = clazz;
                     getCodeFunction = AddressObjects.Object::getCODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.AUTONOMY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId);
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("No new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -183,38 +207,42 @@ public class Fiasclientv2 extends AbstractWindow {
                                     fe.setCode(getCodeFunction.apply(addressObjectFork.getObject()));
                                     commitContext.addInstanceToCommit(fe);
                                     progress = addressObjectFork.getOffset();
+                                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                                    taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
-                                taskLifeCycle.publish(percentValue);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Areas
                 if ((boolean) options.getOrDefault(AddressLevel.AREA, true)) {
                     clazz = Area.class;
+                    lastClassWorked = clazz;
                     getCodeFunction = AddressObjects.Object::getAREACODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.AREA.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId);
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("No new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -222,38 +250,42 @@ public class Fiasclientv2 extends AbstractWindow {
                                     fe.setCode(getCodeFunction.apply(addressObjectFork.getObject()));
                                     commitContext.addInstanceToCommit(fe);
                                     progress = addressObjectFork.getOffset();
+                                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                                    taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
-                                taskLifeCycle.publish(percentValue);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Cities
                 if ((boolean) options.getOrDefault(AddressLevel.CITY, true)) {
                     clazz = City.class;
+                    lastClassWorked = clazz;
                     getCodeFunction = AddressObjects.Object::getCITYCODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.CITY.getAddressLevel()) && testParent(o.getPARENTGUID(), regionId);
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("No new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -261,38 +293,42 @@ public class Fiasclientv2 extends AbstractWindow {
                                     fe.setCode(getCodeFunction.apply(addressObjectFork.getObject()));
                                     commitContext.addInstanceToCommit(fe);
                                     progress = addressObjectFork.getOffset();
+                                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                                    taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
-                                taskLifeCycle.publish(percentValue);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Communities
                 if ((boolean) options.getOrDefault(AddressLevel.COMMUNITY, true)) {
                     clazz = Community.class;
+                    lastClassWorked = clazz;
                     getCodeFunction = AddressObjects.Object::getCODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.COMMUNITY.getAddressLevel()) && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId));
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("No new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -300,38 +336,42 @@ public class Fiasclientv2 extends AbstractWindow {
                                     fe.setCode(getCodeFunction.apply(addressObjectFork.getObject()));
                                     commitContext.addInstanceToCommit(fe);
                                     progress = addressObjectFork.getOffset();
+                                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                                    taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
-                                taskLifeCycle.publish(percentValue);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Locations
                 if ((boolean) options.getOrDefault(AddressLevel.LOCATION, true)) {
                     clazz = Location.class;
+                    lastClassWorked = clazz;
                     getCodeFunction = AddressObjects.Object::getCODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.LOCATION.getAddressLevel()) && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId));
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("No new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -339,38 +379,42 @@ public class Fiasclientv2 extends AbstractWindow {
                                     fe.setCode(getCodeFunction.apply(addressObjectFork.getObject()));
                                     commitContext.addInstanceToCommit(fe);
                                     progress = addressObjectFork.getOffset();
+                                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                                    taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
-                                taskLifeCycle.publish(percentValue);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Streets
                 if ((boolean) options.getOrDefault(AddressLevel.STREET, true)) {
                     clazz = Street.class;
+                    lastClassWorked = clazz;
                     getCodeFunction = AddressObjects.Object::getSTREETCODE;
                     predicate = o -> o.getAOLEVEL().equals(AddressLevel.STREET.getAddressLevel()) && (testParent(o.getPARENTGUID(), cityId) || testParent(o.getPARENTGUID(), regionId));
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     while (progress <= Files.size(filePath)) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
                             //updateConfigProgress(clazz, progress);
                             break;
                         } else {
                             CommitContext commitContext = new CommitContext();
+                            sendToLog("Searching next batch of objects...");
                             List<AddressObjectFork> addressObjectForks = fiasClient.loadList(predicate, filePath, progress, batchSize);
                             if (addressObjectForks.size() == 0) {
-                                log.debug("{} new Fias Entities were processed (class = {}), reached 100% of file",
+                                sendToLog(MessageFormat.format("No new Fias Entities were processed (class = {1}), reached 100% of file",
                                         addressObjectForks.size(),
-                                        clazz.getSimpleName());
+                                        clazz.getSimpleName()));
                                 break;
                             } else {
                                 for (AddressObjectFork addressObjectFork : addressObjectForks) {
@@ -378,28 +422,31 @@ public class Fiasclientv2 extends AbstractWindow {
                                     fe.setCode(getCodeFunction.apply(addressObjectFork.getObject()));
                                     commitContext.addInstanceToCommit(fe);
                                     progress = addressObjectFork.getOffset();
+                                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                                    taskLifeCycle.publish(percentValue);
                                 }
                                 dataManager.commit(commitContext);
-                                percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
-                                taskLifeCycle.publish(percentValue);
-                                log.debug("{} new Fias Entities were processed (class = {}), reached {}% of file",
+                                sendToLog(MessageFormat.format("{0} new Fias Entities were processed (class = {1}), reached {2}% of file",
                                         addressObjectForks.size(),
                                         clazz.getSimpleName(),
-                                        percentValue);
+                                        percentValue));
                             }
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 //грузим Houses
                 if ((boolean) options.getOrDefault("needLoadHouses", true)) {
                     //Class<House> clazz = House.class;
                     clazz = House.class;
+                    lastClassWorked = clazz;
                     Path filePathHouses = getPathByPattern(HOUSE.getName());
                     progress = getConfigProgress(clazz);
+                    percentValue = (int) (Math.abs((double) progress / (double) Files.size(filePath) * 100));
+                    taskLifeCycle.publish(percentValue);
                     PartialUnmarshallerFork<Houses.House> pum = fiasClient.getUnmarshallerFork(Houses.House.class, progress);
-                    log.debug("Start Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Start Creating objects of class {0}", clazz.getSimpleName()));
                     List<House> houses = new ArrayList<>();
                     while (pum.hasNext()) {
                         if (taskLifeCycle.isCancelled() || taskLifeCycle.isInterrupted()) {
@@ -417,14 +464,14 @@ public class Fiasclientv2 extends AbstractWindow {
                         if (houses.size() == batchSize) {
                             CommitContext commitContext = new CommitContext(houses);
                             dataManager.commit(commitContext);
-                            log.debug("{} new Houses were processed (class = {}), reached {}% of file",
+                            log.debug(MessageFormat.format("{0} new Houses were processed (class = {1}), reached {2}% of file",
                                     houses.size(),
                                     clazz.getSimpleName(),
-                                    percentValue);
+                                    percentValue));
                             houses.clear();
                         }
                     }
-                    log.debug("Finished Creating objects of class {}", clazz.getSimpleName());
+                    sendToLog(MessageFormat.format("Finished Creating objects of class {0}", clazz.getSimpleName()));
                 }
 
                 return null;
@@ -434,6 +481,9 @@ public class Fiasclientv2 extends AbstractWindow {
             public void done(Void result) {
                 showNotification(getMessage("loadDone"));
                 updateConfigProgress(clazz, 0);
+                progressBar.setValue(1f);
+                progressLabel.setValue("100%");
+                setupControlButtons(true);
                 super.done(result);
             }
 
@@ -446,13 +496,14 @@ public class Fiasclientv2 extends AbstractWindow {
             @Override
             public void canceled() {
                 updateConfigProgress(clazz, progress);
+                setupControlButtons(true);
+                sendToLog("Task was cancelled");
                 showNotification(getMessage("loadCanceled"));
             }
         };
     }
 
     public void onPauseLoadingDataBtnClick() {
-        //if (backgroundWorker.handle(task).isAlive())
         taskHandler.cancel();
     }
 
@@ -712,5 +763,41 @@ public class Fiasclientv2 extends AbstractWindow {
 
     public void onResetProgressButtonClick() {
         resetConfigProgress();
+        log.warn("Progress was reseted");
+    }
+
+    //слушатели на закрытие окна (для сохранения прогресса)
+    private void setupCloseWindowListeners() {
+        //слушатель на закрытие окна по кнопке крестик
+        this.addBeforeCloseWithCloseButtonListener(e -> {
+            if (taskWasStarted && lastClassWorked != null) {
+                taskHandler.cancel();
+                updateConfigProgress(lastClassWorked, progress);
+            }
+        });
+        //слушатель на закрытие окна по shortcut Esc
+        this.addBeforeCloseWithShortcutListener(e -> {
+            if (taskWasStarted && lastClassWorked != null) {
+                taskHandler.cancel();
+                updateConfigProgress(lastClassWorked, progress);
+            }
+        });
+    }
+
+    //обновляем доступность кнопок
+    private void setupControlButtons(boolean taskIsStopped) {
+        if (taskIsStopped) {
+            loadDataBtn.setEnabled(true);
+            resetProgressButton.setEnabled(true);
+            pauseLoadingDataBtn.setEnabled(false);
+        } else {
+            loadDataBtn.setEnabled(false);
+            resetProgressButton.setEnabled(false);
+            pauseLoadingDataBtn.setEnabled(true);
+        }
+    }
+
+    private void sendToLog(String text) {
+        log.info(text);
     }
 }

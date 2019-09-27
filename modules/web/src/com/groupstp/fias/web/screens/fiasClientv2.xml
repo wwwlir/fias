@@ -20,7 +20,7 @@
     </dsContext>
     <dialogMode height="600"
                 width="800"/>
-    <layout expand="fakeLabel"
+    <layout expand="fakeLbl"
             spacing="true">
         <checkBox id="regionCheckField"
                   caption="msg://regionCheckField"/>
@@ -52,12 +52,15 @@
             <buttonsPanel id="buttonPanel">
                 <button id="loadDataBtn"
                         caption="msg://loadDataBtn"
+                        disableOnClick="true"
                         invoke="onBtnClick"/>
                 <button id="pauseLoadingDataBtn"
                         caption="msg://pauseLoadingDataBtn"
+                        disableOnClick="true"
                         invoke="onPauseLoadingDataBtnClick"/>
                 <button id="resetProgressButton"
                         caption="msg://resetProgressButton"
+                        disableOnClick="true"
                         invoke="onResetProgressButtonClick"/>
             </buttonsPanel>
             <hbox spacing="true">
@@ -69,6 +72,6 @@
                        width="50px"/>
             </hbox>
         </vbox>
-        <label id="fakeLabel"/>
+        <label id="fakeLbl"/>
     </layout>
 </window>

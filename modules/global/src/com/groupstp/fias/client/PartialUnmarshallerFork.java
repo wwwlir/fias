@@ -1,5 +1,8 @@
 package com.groupstp.fias.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLInputFactory;
@@ -7,6 +10,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -20,6 +24,11 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
     private final Unmarshaller unmarshaller;
     private final ProgressCounterFilterInputStream inputStream;
     private long offset;
+    //для хранения прогресса повторного чтения для вывода в лог
+    private int lastPercentValue;
+    private int percentValue;
+
+    private static final Logger log = LoggerFactory.getLogger("FiasClient");
 
     @Deprecated
     public PartialUnmarshallerFork(ProgressCounterFilterInputStream inputStream, Class<T> destinationClass) throws Exception {
@@ -42,6 +51,7 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
         this.unmarshaller = JAXBContext.newInstance(destinationClass).createUnmarshaller();
         this.reader = XMLInputFactory.newInstance().createXMLStreamReader(inputStream);
         this.offset = offset;
+        this.percentValue = 0;
 
         // ignore headers
         skipElements(START_DOCUMENT, DTD);
@@ -49,8 +59,8 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
         reader.nextTag();
         // if there's no tag, ignore root element's end
         skipElements(END_ELEMENT);
-        //skip beginning of the document (if it was read earlier)
-        skipBeginning(offset);
+        //skip beginning of the document (if it was parsed earlier)
+        skipBeginning(this.offset);
     }
 
     public ProgressCounterFilterInputStream getInputStream() {
@@ -96,7 +106,13 @@ public class PartialUnmarshallerFork<T> implements Iterator<T>, Closeable {
     }
 
     private void skipBeginning(long offset) throws Exception {
-        while (this.inputStream.getProgress() <= offset)
+        while (this.inputStream.getProgress() <= offset) {
             reader.next();
+            lastPercentValue = this.percentValue;
+            this.percentValue = (int) ((float) this.inputStream.getProgress() / (float) offset * 100);
+            if (this.percentValue > lastPercentValue)
+                log.info("Searching last position of parsing, reached {}% of last position",
+                        this.percentValue);
+        }
     }
 }

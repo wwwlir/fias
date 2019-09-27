@@ -21,7 +21,7 @@ import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
 import static org.meridor.fias.enums.FiasFile.HOUSE;
 
 public class XMLLoaderFork {
-    private static final Logger log = LoggerFactory.getLogger("outPut");
+    private static final Logger log = LoggerFactory.getLogger("FiasClient");
 
     private final Path xmlDirectory;
 
@@ -72,14 +72,14 @@ public class XMLLoaderFork {
             Path filePath = getPathByPattern(ADDRESS_OBJECTS.getName());
             //InputStream inputStream = new BufferedInputStream(new FileInputStream(filePath.toFile()));
             ProgressCounterFilterInputStream inputStream = new ProgressCounterFilterInputStream(new BufferedInputStream(new FileInputStream(filePath.toFile())));
-            log.debug("Searching objects in file {}", filePath);
+            log.info("Searching objects in file {}", filePath);
             try (PartialUnmarshallerFork<AddressObjects.Object> partialUnmarshaller = new PartialUnmarshallerFork<>(inputStream, AddressObjects.Object.class)) {
                 List<AddressObjects.Object> results = new ArrayList<>();
                 while (partialUnmarshaller.hasNext()) {
                     AddressObjects.Object addressObject = partialUnmarshaller.next();
                     if (predicate.test(addressObject)) {
                         results.add(addressObject);
-                        log.debug("Founded {} object(s) in file, readed {} % of file",
+                        log.info("Founded {} object(s) in file, readed {} % of file",
                                 results.indexOf(addressObject),
                                 //(int) (Math.abs((double) partialUnmarshaller.getReader().getLocation().getCharacterOffset()) / (double) Files.size(filePath) * 100));
                                 (int) (Math.abs((double) partialUnmarshaller.getInputStream().getProgress() / (double) Files.size(filePath) * 100)));
@@ -131,7 +131,7 @@ public class XMLLoaderFork {
     public List<AddressObjectFork> loadObjects(Predicate<AddressObjects.Object> predicate, Path filePath, long offset, int batchSize) throws FileNotFoundException {
         List<AddressObjectFork> results = new ArrayList<>();
         ProgressCounterFilterInputStream inputStream = new ProgressCounterFilterInputStream(new BufferedInputStream(new FileInputStream(filePath.toFile())));
-        log.debug("Searching objects in file {}", filePath);
+        log.info("Searching objects in file {}", filePath);
         try {
             try (PartialUnmarshallerFork<AddressObjects.Object> partialUnmarshaller = new PartialUnmarshallerFork<>(inputStream, AddressObjects.Object.class, offset)) {
                 while (partialUnmarshaller.hasNext()) {
@@ -139,7 +139,7 @@ public class XMLLoaderFork {
                     if (predicate.test(addressObject)) {
                         AddressObjectFork addressObjectFork = new AddressObjectFork(addressObject, partialUnmarshaller.getInputStream().getProgress());
                         results.add(addressObjectFork);
-                        log.debug("Founded {} object(s) in file, reached {}% of file",
+                        log.info("Founded {} object(s) in file, reached {}% of file",
                                 results.indexOf(addressObjectFork) + 1,
                                 (int) (Math.abs((double) partialUnmarshaller.getInputStream().getProgress() / (double) Files.size(filePath) * 100)));
                         //если достигнут размер пакета для записи в бд
