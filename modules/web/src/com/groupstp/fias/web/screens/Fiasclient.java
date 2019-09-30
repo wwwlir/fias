@@ -1,24 +1,33 @@
 package com.groupstp.fias.web.screens;
 
 import com.groupstp.fias.entity.FiasEntity;
-import com.groupstp.fias.service.FiasReadService;
 import com.haulmont.cuba.gui.components.AbstractWindow;
 import com.haulmont.cuba.gui.components.CheckBox;
 import com.haulmont.cuba.gui.components.LookupField;
 import com.haulmont.cuba.gui.components.ProgressBar;
 import com.haulmont.cuba.gui.executors.BackgroundTask;
+import com.haulmont.cuba.gui.executors.BackgroundTaskHandler;
 import com.haulmont.cuba.gui.executors.BackgroundWorker;
 import com.haulmont.cuba.gui.executors.TaskLifeCycle;
 import org.meridor.fias.enums.AddressLevel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static org.meridor.fias.enums.FiasFile.ADDRESS_OBJECTS;
+
 public class Fiasclient extends AbstractWindow {
-    @Inject
-    private FiasReadService fiasReadService;
+    private static final Logger log = LoggerFactory.getLogger("output");
+
     @Inject
     private BackgroundWorker backgroundWorker;
 
@@ -45,6 +54,8 @@ public class Fiasclient extends AbstractWindow {
     @Inject
     private ProgressBar progressBar;
 
+    private BackgroundTaskHandler taskHandler;
+
     public void onBtnClick() {
         HashMap<Object, Object> levelMap = new HashMap<>();
         levelMap.put(AddressLevel.REGION, regionCheckField.getValue());
@@ -59,11 +70,16 @@ public class Fiasclient extends AbstractWindow {
             levelMap.put("regionId", ((FiasEntity) regionField.getValue()).getId());
         if (cityField.getValue() != null)
             levelMap.put("cityId", ((FiasEntity) cityField.getValue()).getId());
+        progressBar.setIndeterminate(true);
+        taskHandler = backgroundWorker.handle(createBackgroundTask(levelMap));
+        taskHandler.execute();
+    }
 
-        BackgroundTask<Integer, Void> task = new BackgroundTask<Integer, Void>(TimeUnit.HOURS.toSeconds(5), this){
+    private BackgroundTask<Integer, Void> createBackgroundTask(HashMap<Object, Object> levelMap) {
+        return new BackgroundTask<Integer, Void>(TimeUnit.HOURS.toSeconds(5), this) {
             @Override
             public Void run(TaskLifeCycle<Integer> taskLifeCycle) throws Exception {
-                fiasReadService.readFias(levelMap);
+                //fiasReadService.readFias(levelMap);
                 taskLifeCycle.publish(1);
                 return null;
             }
@@ -80,8 +96,17 @@ public class Fiasclient extends AbstractWindow {
                 progressBar.setIndeterminate(false);
                 super.progress(changes);
             }
+
+            @Override
+            public void canceled() {
+                progressBar.setIndeterminate(false);
+                showNotification("Задача была отменена");
+            }
         };
-        progressBar.setIndeterminate(true);
-        backgroundWorker.handle(task).execute();
+    }
+
+    public void onPauseLoadingDataBtnClick() {
+        //if (backgroundWorker.handle(task).isAlive())
+        taskHandler.cancel();
     }
 }

@@ -29,6 +29,7 @@
                 <action id="create"/>
                 <action id="edit"/>
                 <action id="remove"/>
+                <action id="refresh"/>
             </actions>
             <columns>
                 <column id="eststatus"/>
@@ -58,6 +59,8 @@
                         action="housesTable.edit"/>
                 <button id="removeBtn"
                         action="housesTable.remove"/>
+                <button id="updateBtn"
+                        action="housesTable.refresh"/>
             </buttonsPanel>
         </groupTable>
     </layout>
