@@ -10,8 +10,6 @@
                   ref="cuba_ServerSelector"/>
         <property name="remoteServices">
             <map>
-                <entry key="fias_FiasReadService"
-                       value="com.groupstp.fias.service.FiasReadService"/>
             </map>
         </property>
     </bean>

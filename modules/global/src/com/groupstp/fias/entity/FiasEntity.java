@@ -2,6 +2,7 @@ package com.groupstp.fias.entity;
 
 import com.groupstp.fias.entity.enums.FiasEntityOperationStatus;
 import com.groupstp.fias.entity.enums.FiasEntityStatus;
+import com.haulmont.chile.core.annotations.MetaProperty;
 import com.haulmont.chile.core.annotations.NamePattern;
 import com.haulmont.cuba.core.entity.StandardEntity;
 
@@ -168,6 +169,4 @@ public class FiasEntity extends StandardEntity {
     public String getShortname() {
         return shortname;
     }
-
-
 }

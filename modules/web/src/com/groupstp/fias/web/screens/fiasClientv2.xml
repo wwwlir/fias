@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <window xmlns="http://schemas.haulmont.com/cuba/window.xsd"
-        class="com.groupstp.fias.web.screens.Fiasclient"
+        class="com.groupstp.fias.web.screens.Fiasclientv2"
         messagesPack="com.groupstp.fias.web.screens">
     <dsContext>
         <collectionDatasource id="regionsDs"
@@ -20,7 +20,7 @@
     </dsContext>
     <dialogMode height="600"
                 width="800"/>
-    <layout expand="buttonPanel"
+    <layout expand="fakeLbl"
             spacing="true">
         <checkBox id="regionCheckField"
                   caption="msg://regionCheckField"/>
@@ -46,15 +46,32 @@
                      caption="msg://cityToLoadField"
                      optionsDatasource="citiesDs"
                      width="400px"/>
-        <buttonsPanel id="buttonPanel">
-            <button id="loadDataBtn"
-                    caption="msg://loadDataBtn"
-                    invoke="onBtnClick"/>
-            <button id="pauseLoadingDataBtn"
-                    caption="Отмена"
-                    invoke="onPauseLoadingDataBtnClick"/>
-            <progressBar id="progressBar"
-                         width="335px"/>
-        </buttonsPanel>
+        <vbox id="vbox"
+              spacing="true"
+              width="AUTO">
+            <buttonsPanel id="buttonPanel">
+                <button id="loadDataBtn"
+                        caption="msg://loadDataBtn"
+                        disableOnClick="true"
+                        invoke="onBtnClick"/>
+                <button id="pauseLoadingDataBtn"
+                        caption="msg://pauseLoadingDataBtn"
+                        disableOnClick="true"
+                        invoke="onPauseLoadingDataBtnClick"/>
+                <button id="resetProgressButton"
+                        caption="msg://resetProgressButton"
+                        disableOnClick="true"
+                        invoke="onResetProgressButtonClick"/>
+            </buttonsPanel>
+            <hbox spacing="true">
+                <progressBar id="progressBar"
+                             width="335px"/>
+                <label id="progressLabel"
+                       align="MIDDLE_CENTER"
+                       height="50px"
+                       width="50px"/>
+            </hbox>
+        </vbox>
+        <label id="fakeLbl"/>
     </layout>
 </window>
